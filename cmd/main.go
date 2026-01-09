@@ -1,10 +1,12 @@
 package main
 
 import (
+	"context"
 	"log"
 	"log/slog"
 	"os"
 	"user_advt/internal/config"
+	"user_advt/internal/storage/postgres"
 )
 
 const (
@@ -20,6 +22,13 @@ func main() {
 	logger := LoggerSetup(cfg.Env)
 	logger.Info("Init app", slog.String("env:", cfg.Env))
 
+	ctx := context.Background()
+	_, err := postgres.NewStorage(ctx, &cfg, logger)
+	if err != nil {
+		logger.Error("Failed to init storage", slog.String("error:", err.Error()))
+		return
+	}
+	logger.Info("Storage initialized")
 }
 
 func LoggerSetup(env string) *slog.Logger {
