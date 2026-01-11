@@ -2,9 +2,13 @@ package postgres
 
 import (
 	"context"
+	"database/sql"
+	"errors"
 	"fmt"
 	"log/slog"
 	"user_advt/internal/config"
+	"user_advt/internal/domain/users"
+	"user_advt/internal/storage"
 
 	"github.com/golang-migrate/migrate/v4"
 	_ "github.com/golang-migrate/migrate/v4/database/postgres"
@@ -14,6 +18,7 @@ import (
 
 type Storage struct {
 	db *pgxpool.Pool
+	logger *slog.Logger
 }
 
 func NewStorage(ctx context.Context, cfg *config.Config, logger *slog.Logger) (*Storage, error) {
@@ -37,13 +42,50 @@ func NewStorage(ctx context.Context, cfg *config.Config, logger *slog.Logger) (*
 	// 	return nil, fmt.Errorf("%s: rollback migration failed: %w", op, err)
 	// }
 
-	return &Storage{db: db}, nil
+	logger.Info("Storage initialized")
+
+	return &Storage{db: db, logger: logger}, nil
+}
+
+func (s *Storage) SaveUser(ctx context.Context, name, email, password string) (string, error) {
+
+	var user users.User
+	s.logger.Info("password: ", password)
+
+  queryString := "INSERT INTO users(name, email, password_hash) values($1, $2, $3) RETURNING name, email"
+
+	err := s.db.QueryRow(ctx, queryString, name, email, password).Scan(&user.Name, &user.Email)
+	if err != nil {
+		return "", fmt.Errorf("insert record error: %w", err)
+	}
+
+	s.logger.Info(queryString)
+
+	return user.Name, nil
+} 
+
+
+func(s *Storage) GetUser(ctx context.Context, id int) (string, error){
+	var url string
+
+	err := s.db.QueryRow(ctx, "SELECT url FROM urls WHERE id = $1", id).Scan(&url)
+
+	if errors.Is(err, sql.ErrNoRows) {
+    return "", storage.ErrUserNotFount
+	}
+
+	if err != nil {
+		fmt.Printf("execute statement %v:", err)
+		return "", fmt.Errorf("execute statement %w:", err)
+	}
+
+  return url, nil
 }
 
 func runMigrations(databaseURL string) error {
 	const op = "storage.postgres.runMigrations"
 
-	m, err := migrate.New("file:internal/migrations", databaseURL)
+	m, err := migrate.New("file:migrations", databaseURL)
 	if err != nil {
 		return fmt.Errorf("%s: failed to create migrate instance: %w", op, err)
 	}
@@ -58,7 +100,7 @@ func runMigrations(databaseURL string) error {
 
 func rollbackMigrations(databaseURL string) error {
 	m, err := migrate.New(
-		"file://./internal/migrations",
+		"file://./migrations",
 		databaseURL,
 	)
 	if err != nil {
