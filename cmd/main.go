@@ -2,17 +2,16 @@ package main
 
 import (
 	"context"
-	"fmt"
-	// "fmt"
 	"log"
 	"log/slog"
 	"os"
 	"user_advt/internal/config"
-
-	// "user_advt/internal/domain/users"
+	"user_advt/internal/http/handler"
 	"user_advt/internal/service"
 	"user_advt/internal/storage/user/postgres"
 	"user_advt/pkg/hash"
+
+	"github.com/gin-gonic/gin"
 )
 
 const (
@@ -36,20 +35,15 @@ func main() {
 		os.Exit(1)
 	}
 
-	hasher := hash.NewSHA1Hasher("8kWA5D7R)_6@Xv4")
-
-	// fmt.Println(storage.SaveUser(ctx))
+	hasher := hash.NewSHA1Hasher(os.Getenv("SALT_HASH"))
 	
 	service := service.NewUserService(storage, hasher)
 
+	router := gin.New()
 
-	userName, err := service.SignUp(ctx, user.Name, user.Email, user.Password)
+	handler := handler.NewHandler(logger, service)
 
-	if err != nil {
-		logger.Error("Failed to create user", slog.String("error:", err.Error()))
-		os.Exit(1)
-	}
-	fmt.Println(userName, "created")
+	handler.InitUserRoutes(router, cfg.HTTPServer.Port)
 
 }
 
