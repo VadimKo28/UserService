@@ -4,8 +4,10 @@ import (
 	"fmt"
 	"log/slog"
 	"os"
+	"user_advt/internal/http/lib/response"
 
 	"github.com/gin-gonic/gin"
+	"github.com/go-playground/validator/v10"
 )
 
 type UserService interface {
@@ -14,9 +16,9 @@ type UserService interface {
 }
 
 type Request struct {
-	Name     string `json:"name" validate:"required,name"`
-	Email    string `json:"email" validate:"required,email"`
-	Password string `json:"password" validate:"required,password"`
+	Name     string `json:"name" binding:"required"`
+	Email    string `json:"email" binding:"required,email"`
+	Password string `json:"password" binding:"required,min=6"`
 }
 
 type Response struct {
@@ -41,12 +43,18 @@ func (r *Handler) CreateUser(c *gin.Context) {
 	var req Request
 
 	if err := c.ShouldBindJSON(&req); err != nil {
+		validateError := err.(validator.ValidationErrors)
+
 		c.JSON(400, Response{
 			Status: "error",
-			Error:  "invalid request body",
+			Error:  response.ValidationError(validateError),
 		})
+
+		r.logger.Error("Failed to bind JSON", slog.String("error:", response.ValidationError(validateError)))
 		return
 	}
+
+	r.logger.Info("Binded JSON successfully", slog.String("request:", fmt.Sprintf("%+v", req)))
 
 	userName, err := r.service.SignUp(c, req.Name, req.Email, req.Password)
 	if err != nil {
@@ -64,7 +72,7 @@ func (r *Handler) CreateUser(c *gin.Context) {
 }	
 
 func (r *Handler) InitUserRoutes(router *gin.Engine, port string) {	
-  router.POST("/users/signup", r.CreateUser)
+  router.POST("/users/sign-up", r.CreateUser)
 
 	r.logger.Info("Starting server on port: " + port )
 	if err := router.Run(fmt.Sprintf(":%s", port)); err != nil {
