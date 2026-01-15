@@ -3,20 +3,23 @@ package handler
 import (
 	"fmt"
 	"log/slog"
+	"net/http"
 	"os"
-	"user_advt/internal/http/lib/response"
+	"user_advt/internal/config"
+	"user_advt/internal/lib/api/response"
 
 	"github.com/gin-gonic/gin"
 	"github.com/go-playground/validator/v10"
 )
 
+//go:generate mockery --name UserService --output ./mocks --dir .
 type UserService interface {
-	SignUp(ctx *gin.Context, name, email, password string) (string, error)
+	SignUp(ctx *gin.Context, name, email, password string) (int, error)
 	GetUser(ctx *gin.Context, id int) (string, error)
 }
 
 type Request struct {
-	Name     string `json:"name" binding:"required"`
+	Name     string `json:"name" binding:"required,min=2,max=20"`
 	Email    string `json:"email" binding:"required,email"`
 	Password string `json:"password" binding:"required,min=6"`
 }
@@ -24,7 +27,7 @@ type Request struct {
 type Response struct {
 	Status string `json:"status"`
 	Error string `json:"error,omitempty"`
-	Name string `json:"name,omitempty"`	
+	UserID int `json:"user_id,omitempty"`	
 }
 
 type Handler struct {
@@ -44,19 +47,17 @@ func (r *Handler) CreateUser(c *gin.Context) {
 
 	if err := c.ShouldBindJSON(&req); err != nil {
 		validateError := err.(validator.ValidationErrors)
-
 		c.JSON(400, Response{
 			Status: "error",
 			Error:  response.ValidationError(validateError),
 		})
-
 		r.logger.Error("Failed to bind JSON", slog.String("error:", response.ValidationError(validateError)))
 		return
 	}
 
 	r.logger.Info("Binded JSON successfully", slog.String("request:", fmt.Sprintf("%+v", req)))
 
-	userName, err := r.service.SignUp(c, req.Name, req.Email, req.Password)
+	userID, err := r.service.SignUp(c, req.Name, req.Email, req.Password)
 	if err != nil {
 		c.JSON(500, Response{
 			Status: "error",
@@ -67,15 +68,24 @@ func (r *Handler) CreateUser(c *gin.Context) {
 
 	c.JSON(200, Response{
 		Status: "success",
-		Name:   userName,
+	  UserID:  userID,
 	})
 }	
 
-func (r *Handler) InitUserRoutes(router *gin.Engine, port string) {	
+func (r *Handler) InitUserRouter(router *gin.Engine, cfg config.Config) {	
   router.POST("/users/sign-up", r.CreateUser)
 
-	r.logger.Info("Starting server on port: " + port )
-	if err := router.Run(fmt.Sprintf(":%s", port)); err != nil {
+	r.logger.Info("Starting server on port: " + cfg.HTTPServer.Port)
+
+	 srv := &http.Server{
+    Addr:    fmt.Sprintf(":%s", cfg.HTTPServer.Port),
+    Handler: router.Handler(),
+		ReadTimeout: cfg.HTTPServer.Timeout,
+		WriteTimeout: cfg.HTTPServer.Timeout,
+		IdleTimeout: cfg.HTTPServer.IdleTimeout,
+  }
+
+	if err := srv.ListenAndServe(); err != nil {
 		r.logger.Error("Failed to start server", slog.String("error:", err.Error()))
 		os.Exit(1)
 	}
