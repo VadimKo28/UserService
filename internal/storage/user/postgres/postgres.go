@@ -13,6 +13,7 @@ import (
 	"github.com/golang-migrate/migrate/v4"
 	_ "github.com/golang-migrate/migrate/v4/database/postgres"
 	_ "github.com/golang-migrate/migrate/v4/source/file"
+	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
@@ -47,41 +48,50 @@ func NewStorage(ctx context.Context, cfg *config.Config, logger *slog.Logger) (*
 	return &Storage{db: db, logger: logger}, nil
 }
 
-func (s *Storage) Save(ctx context.Context, name, email, password string) (string, error) {
+func (s *Storage) Save(ctx context.Context, user *users.UserCreateDTO) (int, error) {
+	var userID int 
 
-	var user users.User
+  queryString := `INSERT INTO users (name, email, password_hash) VALUES($1, $2, $3) RETURNING id`
 
-  queryString := "INSERT INTO users(name, email, password_hash) values($1, $2, $3) RETURNING name, email"
+	if err := s.db.QueryRow(ctx, queryString, user.Name, user.Email, user.Password).Scan(&userID); err != nil {
+    errorMsg := "insertion record failure"
 
-	err := s.db.QueryRow(ctx, queryString, name, email, password).Scan(&user.Name, &user.Email)
-	if err != nil {
-		errorMsg := "insertion record failer"
+		var pgErr *pgconn.PgError 
+
+		if errors.As(err, &pgErr) {
+			if pgErr.Code == "23505" {
+				s.logger.Error(errorMsg, slog.String("error", pgErr.Detail))
+				return 0, fmt.Errorf("%s", storage.ErrUserAlreadyExists)
+			}
+		}
 
 		s.logger.Error(errorMsg, slog.String("error", err.Error()))
-		return "", fmt.Errorf("%s, %w", errorMsg, err)
+		return 0, fmt.Errorf("msg: %s, error: %w", errorMsg, err)
 	}
 
 	s.logger.Info(queryString)
 
-	return user.Name, nil
+	return userID, nil
 } 
 
 
-func(s *Storage) Get(ctx context.Context, id int) (string, error){
-	var userName string
+func(s *Storage) Get(ctx context.Context, id string) (users.GetUserDTO, error){
+	var user users.GetUserDTO
 
-	err := s.db.QueryRow(ctx, "SELECT name FROM users WHERE id = $1", id).Scan(&userName)
+	err := s.db.QueryRow(ctx, "SELECT id, name, email FROM users WHERE id = $1", id).
+	  Scan(&user.ID, &user.Name, &user.Email)
 
-	if errors.Is(err, sql.ErrNoRows) {
-    return "", storage.ErrUserNotFount
+	if err != nil && errors.Is(err, sql.ErrNoRows) {
+		s.logger.Error("user not found", slog.String("id", id))
+    return users.GetUserDTO{}, storage.ErrUserNotFount
 	}
 
 	if err != nil {
 		fmt.Printf("execute statement %v:", err)
-		return "", fmt.Errorf("execute statement %w:", err)
+		return users.GetUserDTO{}, fmt.Errorf("execute statement %w:", err)
 	}
 
-  return userName, nil
+  return user, nil
 }
 
 func runMigrations(databaseURL string) error {

@@ -2,13 +2,15 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"log"
 	"log/slog"
+	"net/http"
 	"os"
 	"user_advt/internal/config"
-	"user_advt/internal/http/handler"
 	"user_advt/internal/service"
 	"user_advt/internal/storage/user/postgres"
+	"user_advt/internal/user"
 	"user_advt/pkg/hash"
 
 	"github.com/gin-gonic/gin"
@@ -39,11 +41,26 @@ func main() {
 	
 	service := service.NewUserService(storage, hasher)
 
-	router := gin.New()
+	router := gin.Default()
 
-	handler := handler.NewHandler(logger, service)
+	handler := user.NewHandler(logger, service)
 
-	handler.InitUserRoutes(router, cfg.HTTPServer.Port)
+	handler.Register(router)
+
+	logger.Info("Starting server on port: " + cfg.HTTPServer.Port)
+
+	srv := &http.Server{
+		Addr:    fmt.Sprintf(":%s", cfg.HTTPServer.Port),
+		Handler: router.Handler(),
+		ReadTimeout: cfg.HTTPServer.Timeout,
+		WriteTimeout: cfg.HTTPServer.Timeout,
+		IdleTimeout: cfg.HTTPServer.IdleTimeout,
+  }
+
+	if err := srv.ListenAndServe(); err != nil {
+		logger.Error("Failed to start server", slog.String("error:", err.Error()))
+		os.Exit(1)
+	}
 
 }
 

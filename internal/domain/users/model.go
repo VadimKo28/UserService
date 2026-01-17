@@ -1,7 +1,13 @@
 package users
 
-type User struct {
-	Name string `json:"name" required:"true"`
-	Email    string `json:"email" required:"true"`
-	Password string `json:"password" required:"true"`
+type UserCreateDTO struct {
+	Name     string 
+	Email    string 
+	Password string 
+}
+
+type GetUserDTO struct {
+	ID       int
+	Name     string 
+	Email    string 
 }
