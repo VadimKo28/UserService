@@ -3,8 +3,6 @@ package service
 import (
 	"context"
 	"user_advt/internal/domain/users"
-
-	"github.com/gin-gonic/gin"
 )
 
 type UserStorage interface {
@@ -25,7 +23,7 @@ func NewUserService(storage UserStorage, hasher PasswordHasher) *UserService {
 	return &UserService{storage: storage, hasher: hasher}
 }
 
-func (s *UserService) SignUp(ctx *gin.Context, name, email, password string) (int, error) {
+func (s *UserService) SignUp(ctx context.Context, name, email, password string) (int, error) {
 	hashedPassword, err := s.hasher.Hash(password)
 	if err != nil {
 		return 0, err
@@ -40,7 +38,7 @@ func (s *UserService) SignUp(ctx *gin.Context, name, email, password string) (in
 	return s.storage.Save(ctx, &user)
 }
 
-func (s *UserService) GetUser(ctx *gin.Context, id string) (users.GetUserDTO, error) {
+func (s *UserService) GetUser(ctx context.Context, id string) (users.GetUserDTO, error) {
 
 	user, err := s.storage.Get(ctx, id)
 

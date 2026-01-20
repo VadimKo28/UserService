@@ -8,25 +8,21 @@ import (
 	"net/http"
 	"os"
 	"user_advt/internal/config"
+	"user_advt/internal/http/user/handler"
+	"user_advt/internal/lib/logger"
+	"user_advt/internal/middleware"
 	"user_advt/internal/service"
 	"user_advt/internal/storage/user/postgres"
-	"user_advt/internal/user"
 	"user_advt/pkg/hash"
 
 	"github.com/gin-gonic/gin"
-)
-
-const (
-	envLocal	= "local"
-	envProd	= "prod"
-	envDev	= "dev"
 )
 
 func main() {
 	cfg := config.MustLoad()
 	log.Println("Config loaded")
 
-	logger := LoggerSetup(cfg.Env)
+	logger := logger.LoggerSetup(cfg.Env)
 	logger.Info("Init app", slog.String("env:", cfg.Env))
 
 	ctx := context.Background()
@@ -43,7 +39,9 @@ func main() {
 
 	router := gin.Default()
 
-	handler := user.NewHandler(logger, service)
+	router.Use(middleware.ErrorHandler())
+
+	handler := handler.NewHandler(logger, service)
 
 	handler.Register(router)
 
@@ -62,25 +60,4 @@ func main() {
 		os.Exit(1)
 	}
 
-}
-
-func LoggerSetup(env string) *slog.Logger {
-	var log *slog.Logger
-
-  switch env {
-    case envLocal:
-			log = slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{
-				Level: slog.LevelDebug,
-			}))
-    case envDev:
-			log = slog.New(slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{
-				Level: slog.LevelDebug,
-			}))
-		case envProd:
-			log = slog.New(slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{
-				Level: slog.LevelInfo,
-			}))
-  }
-
-	return log 
 }

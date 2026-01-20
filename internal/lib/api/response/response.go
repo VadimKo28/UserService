@@ -2,16 +2,26 @@ package response
 
 import (
 	"strings"
+	"user_advt/internal/storage"
 
 	"github.com/go-playground/validator/v10"
 )
 
-func ValidationError(errs validator.ValidationErrors) string {
+type ValidError struct {
+	Err string
+	Status int
+}
+
+func (v *ValidError) Error() string {
+  return v.Err
+}
+
+func ValidationError(errs validator.ValidationErrors) *ValidError {
 	var errorMsg []string
 
 	for _, err := range errs {
 		switch err.ActualTag() {
-    case "uuid4": 
+		case "uuid4":
 			errorMsg = append(errorMsg, err.Field()+" must be a valid UUIDv4")
 		case "required":
 			errorMsg = append(errorMsg, err.Field()+" is required")
@@ -20,10 +30,16 @@ func ValidationError(errs validator.ValidationErrors) string {
 		case "min":
 			errorMsg = append(errorMsg, err.Field()+" must be at least "+err.Param()+" characters long")
 		case "max":
-			errorMsg = append(errorMsg, err.Field()+" must be at most "+err.Param()+" characters long")	
+			errorMsg = append(errorMsg, err.Field()+" must be at most "+err.Param()+" characters long")
 		default:
 			errorMsg = append(errorMsg, err.Field()+" is invalid")
 		}
 	}
-	return strings.Join(errorMsg, ", ")
+
+	validateErr := ValidError{
+		Err: strings.Join(errorMsg, ", "),
+	  Status: storage.StatusUnprocessableEntity,
+	}
+
+	return &validateErr
 }

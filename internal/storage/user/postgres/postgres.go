@@ -58,15 +58,13 @@ func (s *Storage) Save(ctx context.Context, user *users.UserCreateDTO) (int, err
 
 		var pgErr *pgconn.PgError 
 
-		if errors.As(err, &pgErr) {
-			if pgErr.Code == "23505" {
-				s.logger.Error(errorMsg, slog.String("error", pgErr.Detail))
-				return 0, fmt.Errorf("%s", storage.ErrUserAlreadyExists)
-			}
+		if errors.As(err, &pgErr) && pgErr.Code == "23505" {
+			s.logger.Error(errorMsg, slog.String("error", pgErr.Detail))
+			return 0, storage.ErrUserAlreadyExists
 		}
 
 		s.logger.Error(errorMsg, slog.String("error", err.Error()))
-		return 0, fmt.Errorf("msg: %s, error: %w", errorMsg, err)
+		return 0, storage.ErrInternalServerError
 	}
 
 	s.logger.Info(queryString)
@@ -81,12 +79,12 @@ func(s *Storage) Get(ctx context.Context, id string) (users.GetUserDTO, error){
 	err := s.db.QueryRow(ctx, "SELECT id, name, email FROM users WHERE id = $1", id).
 	  Scan(&user.ID, &user.Name, &user.Email)
 
-	if err != nil && errors.Is(err, sql.ErrNoRows) {
-		s.logger.Error("user not found", slog.String("id", id))
-    return users.GetUserDTO{}, storage.ErrUserNotFount
-	}
-
 	if err != nil {
+	  if errors.Is(err, sql.ErrNoRows) {
+		  s.logger.Error("user not found", slog.String("id", id))
+      return users.GetUserDTO{}, storage.ErrUserNotFount 
+	  }
+
 		fmt.Printf("execute statement %v:", err)
 		return users.GetUserDTO{}, fmt.Errorf("execute statement %w:", err)
 	}

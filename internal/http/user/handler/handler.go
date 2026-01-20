@@ -1,6 +1,7 @@
-package user
+package handler
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"log/slog"
@@ -15,8 +16,8 @@ import (
 
 //go:generate mockery --name UserService --output ./mocks --dir .
 type UserService interface {
-	SignUp(ctx *gin.Context, name, email, password string) (int, error)
-	GetUser(ctx *gin.Context, id string) (users.GetUserDTO, error)
+	SignUp(ctx context.Context, name, email, password string) (int, error)
+	GetUser(ctx context.Context, id string) (users.GetUserDTO, error)
 }
 
 type CreateUserRequestParams struct {
@@ -33,39 +34,34 @@ type Response struct {
 	UserEmail string `json:"user_email,omitempty"`
 }
 
-type Handler struct {
+type handler struct {
 	logger  *slog.Logger
 	service UserService
 }
 
-func NewHandler(logger *slog.Logger, service UserService) *Handler {
-  return &Handler{
+func NewHandler(logger *slog.Logger, service UserService) *handler {
+  return &handler{
 		logger: logger,
 		service: service,
 	}
 }
 
-func (r *Handler) CreateUser(c *gin.Context) {
+func (r *handler) CreateUser(c *gin.Context) {
 	var params CreateUserRequestParams
 
 	if err := c.ShouldBindJSON(&params); err != nil {
 		validateError := err.(validator.ValidationErrors)
-		c.JSON(400, Response{
-			Status: "error",
-			Error:  response.ValidationError(validateError),
-		})
-		r.logger.Error("Failed to bind JSON", slog.String("error:", response.ValidationError(validateError)))
+
+		c.Error(response.ValidationError(validateError))
+		r.logger.Error("Failed to bind JSON", slog.String("error:", response.ValidationError(validateError).Err))
 		return
 	}
 
 	r.logger.Info("Binded JSON successfully", slog.String("request:", fmt.Sprintf("%+v", params)))
 
-	userID, err := r.service.SignUp(c, params.Name, params.Email, params.Password)
+	userID, err := r.service.SignUp(c.Request.Context(), params.Name, params.Email, params.Password)
 	if err != nil {
-		c.JSON(500, Response{
-			Status: "error",
-			Error:  err.Error(),
-		})
+		c.Error(err)
 		return
 	}
 
@@ -75,7 +71,7 @@ func (r *Handler) CreateUser(c *gin.Context) {
 	})
 }	
 
-func (r *Handler) GetUserById(c *gin.Context) {
+func (r *handler) GetUserById(c *gin.Context) {
 
 	id := c.Param("id")
 
@@ -87,7 +83,7 @@ func (r *Handler) GetUserById(c *gin.Context) {
 		return
 	}
 
-	user, err := r.service.GetUser(c, id)
+	user, err := r.service.GetUser(c.Request.Context(), id)
 
 	if err != nil {
 		if errors.Is(err, storage.ErrUserNotFount) {
@@ -118,7 +114,7 @@ const (
 	signUpUserUrl = "/users/sign-up"
 )
 
-func (r *Handler) Register(router *gin.Engine) {	
+func (r *handler) Register(router *gin.Engine) {	
   router.POST(signUpUserUrl, r.CreateUser)
 	router.GET(userUrl, r.GetUserById)
 }
