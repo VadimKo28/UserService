@@ -8,12 +8,12 @@ import (
 )
 
 type ValidError struct {
-	Err string
+	ValidErr string
 	Status int
 }
 
 func (v *ValidError) Error() string {
-  return v.Err
+  return v.ValidErr
 }
 
 func ValidationError(errs validator.ValidationErrors) *ValidError {
@@ -37,7 +37,7 @@ func ValidationError(errs validator.ValidationErrors) *ValidError {
 	}
 
 	validateErr := ValidError{
-		Err: strings.Join(errorMsg, ", "),
+		ValidErr: strings.Join(errorMsg, ", "),
 	  Status: storage.StatusUnprocessableEntity,
 	}
 

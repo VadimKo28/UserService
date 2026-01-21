@@ -14,7 +14,6 @@ import (
 	"user_advt/internal/service"
 	"user_advt/internal/storage/user/postgres"
 	"user_advt/pkg/hash"
-
 	"github.com/gin-gonic/gin"
 )
 

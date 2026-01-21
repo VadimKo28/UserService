@@ -6,7 +6,12 @@ type UserCreateDTO struct {
 	Password string 
 }
 
-type GetUserDTO struct {
+type UserSignInDTO struct {
+	Email    string 
+	Password string 
+}
+
+type User struct {
 	ID       int
 	Name     string 
 	Email    string 

@@ -18,12 +18,12 @@ import (
 )
 
 type Storage struct {
-	db *pgxpool.Pool
+	db     *pgxpool.Pool
 	logger *slog.Logger
 }
 
 func NewStorage(ctx context.Context, cfg *config.Config, logger *slog.Logger) (*Storage, error) {
-  connStr := cfg.DatabasePath
+	connStr := cfg.DatabasePath
 
 	// op константа операции для удобства поиска ошибки
 	// Используем её в обёртке fmt.Errorf
@@ -32,7 +32,7 @@ func NewStorage(ctx context.Context, cfg *config.Config, logger *slog.Logger) (*
 	db, err := pgxpool.New(ctx, connStr)
 
 	if err != nil {
-		return nil, fmt.Errorf("%s: %w",op, err)
+		return nil, fmt.Errorf("%s: %w", op, err)
 	}
 
 	if err := runMigrations(connStr); err != nil {
@@ -49,14 +49,14 @@ func NewStorage(ctx context.Context, cfg *config.Config, logger *slog.Logger) (*
 }
 
 func (s *Storage) Save(ctx context.Context, user *users.UserCreateDTO) (int, error) {
-	var userID int 
+	var userID int
 
-  queryString := `INSERT INTO users (name, email, password_hash) VALUES($1, $2, $3) RETURNING id`
+	queryString := `INSERT INTO users (name, email, password_hash) VALUES($1, $2, $3) RETURNING id`
 
 	if err := s.db.QueryRow(ctx, queryString, user.Name, user.Email, user.Password).Scan(&userID); err != nil {
-    errorMsg := "insertion record failure"
+		errorMsg := "insertion record failure"
 
-		var pgErr *pgconn.PgError 
+		var pgErr *pgconn.PgError
 
 		if errors.As(err, &pgErr) && pgErr.Code == "23505" {
 			s.logger.Error(errorMsg, slog.String("error", pgErr.Detail))
@@ -70,26 +70,52 @@ func (s *Storage) Save(ctx context.Context, user *users.UserCreateDTO) (int, err
 	s.logger.Info(queryString)
 
 	return userID, nil
-} 
+}
 
+func (s *Storage) Get(ctx context.Context, id string) (users.User, error) {
+	var user users.User
 
-func(s *Storage) Get(ctx context.Context, id string) (users.GetUserDTO, error){
-	var user users.GetUserDTO
+  queryString := `SELECT id, name, email FROM users WHERE id = $1`
 
-	err := s.db.QueryRow(ctx, "SELECT id, name, email FROM users WHERE id = $1", id).
-	  Scan(&user.ID, &user.Name, &user.Email)
+	err := s.db.QueryRow(ctx, queryString, id).
+		Scan(&user.ID, &user.Name, &user.Email)
 
 	if err != nil {
-	  if errors.Is(err, sql.ErrNoRows) {
-		  s.logger.Error("user not found", slog.String("id", id))
-      return users.GetUserDTO{}, storage.ErrUserNotFount 
-	  }
+		if errors.Is(err, sql.ErrNoRows) {
+			s.logger.Error("user not found", slog.String("id", id))
+			return users.User{}, storage.ErrUserNotFount
+		}
 
 		fmt.Printf("execute statement %v:", err)
-		return users.GetUserDTO{}, fmt.Errorf("execute statement %w:", err)
+		return users.User{}, fmt.Errorf("execute statement %w:", err)
 	}
 
-  return user, nil
+	s.logger.Info(queryString)
+
+	return user, nil
+}
+
+func (s *Storage) GetByCredentials(ctx context.Context, userDTO *users.UserSignInDTO) (users.User, error) {
+  var user users.User
+
+  queryString := `SELECT id, name, email FROM users WHERE email = $1 AND password_hash = $2`
+
+	err := s.db.QueryRow(ctx, queryString, userDTO.Email, userDTO.Password).
+		Scan(&user.ID, &user.Name, &user.Email)
+
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			s.logger.Error("user not found", slog.String("email", userDTO.Email))
+			return users.User{}, storage.ErrUserInvalidCredentials
+		}
+
+		fmt.Printf("execute statement %v:", err)
+		return users.User{}, fmt.Errorf("execute statement %w:", err)
+	}
+
+	s.logger.Info(queryString)
+
+	return user, nil	
 }
 
 func runMigrations(databaseURL string) error {
@@ -128,4 +154,3 @@ func rollbackMigrations(databaseURL string) error {
 
 	return nil
 }
-

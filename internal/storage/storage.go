@@ -14,6 +14,8 @@ const (
 var ErrUserNotFount = errors.New("record not found")
 var ErrUserAlreadyExists = errors.New("user with this email already exists")
 var ErrInternalServerError = errors.New("internal server error")
+var ErrUserIDInvalidParams = errors.New("id params must be an integer")
+var ErrUserInvalidCredentials = errors.New("invalid email or password")
 
 
 
