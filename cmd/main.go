@@ -34,11 +34,12 @@ func main() {
 
 	hasher := hash.NewSHA1Hasher(cfg.Auth.PasswordSalt)
 
-	service := service.NewUserService(storage, hasher, cfg.Auth.TokenTTL, []byte(cfg.Auth.JWTSecret))
+	tokenService := service.NewTokenService([]byte(cfg.Auth.JWTSecret), cfg.Auth.TokenTTL)
+	service := service.NewUserService(storage, hasher, tokenService)
 
 	router := gin.Default()
 
-	handler := handler.NewHandler(logger, service)
+	handler := handler.NewHandler(logger, service, tokenService)
 
 	handler.Register(router)
 

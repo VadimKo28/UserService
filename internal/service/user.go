@@ -2,12 +2,7 @@ package service
 
 import (
 	"context"
-	"fmt"
-	"strconv"
-	"time"
 	"user_advt/internal/domain/users"
-
-	"github.com/golang-jwt/jwt/v5"
 )
 
 type UserStorage interface {
@@ -20,15 +15,18 @@ type PasswordHasher interface {
 	Hash(password string) (string, error)
 }
 
-type UserService struct {
-	storage   UserStorage
-	hasher    PasswordHasher
-	tokenTTL  time.Duration
-	jwtSecret []byte
+type TokenSigner interface {
+	SignToken(userID int) (string, error)
 }
 
-func NewUserService(storage UserStorage, hasher PasswordHasher, ttl time.Duration, jwtSecret []byte) *UserService {
-	return &UserService{storage: storage, hasher: hasher, tokenTTL: ttl, jwtSecret: jwtSecret}
+type UserService struct {
+	storage      UserStorage
+	hasher       PasswordHasher
+	tokenService TokenSigner
+}
+
+func NewUserService(storage UserStorage, hasher PasswordHasher, tokenService TokenSigner) *UserService {
+	return &UserService{storage: storage, hasher: hasher, tokenService: tokenService}
 }
 
 func (s *UserService) SignUpUser(ctx context.Context, name, email, password string) (int, error) {
@@ -75,30 +73,5 @@ func (s *UserService) SignInUser(ctx context.Context, email, password string) (s
 		return "", err
 	}
 
-	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.RegisteredClaims{
-		Subject:   strconv.Itoa(int(user.ID)),
-		IssuedAt:  jwt.NewNumericDate(time.Now()),
-		ExpiresAt: jwt.NewNumericDate(time.Now().Add(s.tokenTTL)),
-	})
-
-	ss, err := token.SignedString(s.jwtSecret)
-
-	return ss, err
-}
-
-func (u UserService) ParseToken(tokenString string) (string, error) {
-	claims := &jwt.RegisteredClaims{}
-	token, err := jwt.ParseWithClaims(tokenString, claims, func(token *jwt.Token) (any, error) {
-		return u.jwtSecret, nil
-	}, jwt.WithValidMethods([]string{jwt.SigningMethodHS256.Alg()}))
-
-	if err != nil {
-		return "", err
-	}
-
-	if !token.Valid || claims.Subject == "" {
-		return "", fmt.Errorf("invalid token")
-	}
-
-	return claims.Subject, nil
+	return s.tokenService.SignToken(int(user.ID))
 }

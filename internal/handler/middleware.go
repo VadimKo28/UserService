@@ -20,7 +20,7 @@ func Authentication(h *handler) gin.HandlerFunc {
 			return
 		}
 
-		userId, err := h.service.ParseToken(token)
+		userId, err := h.tokenService.ParseToken(token)
 
 		if err != nil {
 			h.logger.Error("Authorization failed", slog.String("error:", err.Error()))

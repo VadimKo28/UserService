@@ -16,18 +16,23 @@ type UserService interface {
 	SignUpUser(ctx context.Context, name, email, password string) (int, error)
 	GetUser(ctx context.Context, id string) (users.User, error)
 	SignInUser(ctx context.Context, email, password string) (string, error)
+}
+
+type TokenService interface {
 	ParseToken(token string) (string, error)
 }
 
 type handler struct {
-	logger  *slog.Logger
-	service UserService
+	logger       *slog.Logger
+	service      UserService
+	tokenService TokenService
 }
 
-func NewHandler(logger *slog.Logger, service UserService) *handler {
+func NewHandler(logger *slog.Logger, service UserService, tokenService TokenService) *handler {
 	return &handler{
-		logger:  logger,
-		service: service,
+		logger:       logger,
+		service:      service,
+		tokenService: tokenService,
 	}
 }
 
