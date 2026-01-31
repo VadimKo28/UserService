@@ -16,8 +16,5 @@ var ErrUserAlreadyExists = errors.New("user with this email already exists")
 var ErrInternalServerError = errors.New("internal server error")
 var ErrUserIDInvalidParams = errors.New("id params must be an integer")
 var ErrUserInvalidCredentials = errors.New("invalid email or password")
-
-
-
-
-
+var ErrUnauthorized = errors.New("authorization failed")
+var ErrForbidden = errors.New("forbidden")

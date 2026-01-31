@@ -1,7 +1,12 @@
 env: "local"
-database_path: "postgres://postgres:postgres@localhost:5432/user_advt?sslmode=disable"
+
+database_path: ""
+
 http_server:
   host: "localhost"
   port: "8081"
   timeout: 4s
   idle_timeout: 60s
+
+auth: 
+  token_ttl: 360m  
