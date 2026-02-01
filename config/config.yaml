@@ -9,4 +9,4 @@ http_server:
   idle_timeout: 60s
 
 auth: 
-  token_ttl: 360m  
+  token_ttl: 30m  

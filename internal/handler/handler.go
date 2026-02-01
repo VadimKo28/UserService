@@ -45,15 +45,17 @@ const (
 	userUrl       = "/users/:id"
 	signUpUserUrl = "/users/sign-up"
 	singInUserUrl = "/users/sign-in"
+	refreshUrl = "/refresh"
 )
 
-func (r *handler) Register(router *gin.Engine) {
+func (h *handler) Register(router *gin.Engine) {
 	router.Use(middleware.ErrorHandler())
 
 	api := router.Group("/api")
-	api.Use(Authentication(r))
-	api.GET(userUrl, r.GetUserById)
+	api.Use(Authentication(h))
+	api.GET(userUrl, h.GetUserById)
 
-	router.POST(signUpUserUrl, r.SignUp)
-	router.POST(singInUserUrl, r.SignIn)
+	router.POST(signUpUserUrl, h.SignUp)
+	router.POST(singInUserUrl, h.SignIn)
+	router.GET(refreshUrl, h.Refresh)
 }

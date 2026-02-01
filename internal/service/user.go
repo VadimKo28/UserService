@@ -74,4 +74,5 @@ func (s *UserService) SignInUser(ctx context.Context, email, password string) (s
 	}
 
 	return s.tokenService.SignToken(int(user.ID))
-}
+
+}			

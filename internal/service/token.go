@@ -2,6 +2,7 @@ package service
 
 import (
 	"fmt"
+	"math/rand"
 	"strconv"
 	"time"
 
@@ -24,7 +25,15 @@ func (s *TokenService) SignToken(userID int) (string, error) {
 		ExpiresAt: jwt.NewNumericDate(time.Now().Add(s.tokenTTL)),
 	})
 
-	return token.SignedString(s.jwtSecret)
+	// accessToken := token.SignedString(s.jwtSecret)
+
+	// refreshToken, err := newRefreshToken()
+
+	// if err != nil {
+	// 	return "", "", err
+	// }
+
+	return token.SignedString(s.jwtSecret) 
 }
 
 func (s *TokenService) ParseToken(tokenString string) (string, error) {
@@ -42,4 +51,17 @@ func (s *TokenService) ParseToken(tokenString string) (string, error) {
 	}
 
 	return claims.Subject, nil
+}
+
+func newRefreshToken() (string, error){
+  b := make([]byte, 32)
+
+	s := rand.NewSource(time.Now().Unix())
+	r := rand.New(s)
+
+	if _, err := r.Read(b); err != nil {
+		return "", err
+	}
+
+	return fmt.Sprintf("%x", b), nil
 }

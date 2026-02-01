@@ -6,13 +6,9 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
-	"user_advt/internal/config"
 	"user_advt/internal/domain/users"
 	"user_advt/internal/storage"
 
-	"github.com/golang-migrate/migrate/v4"
-	_ "github.com/golang-migrate/migrate/v4/database/postgres"
-	_ "github.com/golang-migrate/migrate/v4/source/file"
 	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
@@ -22,30 +18,8 @@ type Storage struct {
 	logger *slog.Logger
 }
 
-func NewStorage(ctx context.Context, cfg *config.Config, logger *slog.Logger) (*Storage, error) {
-	connStr := cfg.DatabasePath
-
-	// op константа операции для удобства поиска ошибки
-	// Используем её в обёртке fmt.Errorf
-	const op = "storage.postgres.NewStorage"
-
-	db, err := pgxpool.New(ctx, connStr)
-
-	if err != nil {
-		return nil, fmt.Errorf("%s: %w", op, err)
-	}
-
-	if err := runMigrations(connStr); err != nil {
-		return nil, fmt.Errorf("%s: migration failed: %w", op, err)
-	}
-
-	// if err:= rollbackMigrations(connStr); err != nil {
-	// 	return nil, fmt.Errorf("%s: rollback migration failed: %w", op, err)
-	// }
-
-	logger.Info("Storage initialized")
-
-	return &Storage{db: db, logger: logger}, nil
+func NewUserStorage(db *pgxpool.Pool, logger *slog.Logger) *Storage {
+	return &Storage{db: db, logger: logger}
 }
 
 func (s *Storage) Save(ctx context.Context, user *users.UserCreateDTO) (int, error) {
@@ -75,7 +49,7 @@ func (s *Storage) Save(ctx context.Context, user *users.UserCreateDTO) (int, err
 func (s *Storage) Get(ctx context.Context, id string) (users.User, error) {
 	var user users.User
 
-  queryString := `SELECT id, name, email FROM users WHERE id = $1`
+	queryString := `SELECT id, name, email FROM users WHERE id = $1`
 
 	err := s.db.QueryRow(ctx, queryString, id).
 		Scan(&user.ID, &user.Name, &user.Email)
@@ -96,9 +70,9 @@ func (s *Storage) Get(ctx context.Context, id string) (users.User, error) {
 }
 
 func (s *Storage) GetByCredentials(ctx context.Context, userDTO *users.UserSignInDTO) (users.User, error) {
-  var user users.User
+	var user users.User
 
-  queryString := `SELECT id, name, email FROM users WHERE email = $1 AND password_hash = $2`
+	queryString := `SELECT id, name, email FROM users WHERE email = $1 AND password_hash = $2`
 
 	err := s.db.QueryRow(ctx, queryString, userDTO.Email, userDTO.Password).
 		Scan(&user.ID, &user.Name, &user.Email)
@@ -115,42 +89,5 @@ func (s *Storage) GetByCredentials(ctx context.Context, userDTO *users.UserSignI
 
 	s.logger.Info(queryString)
 
-	return user, nil	
-}
-
-func runMigrations(databaseURL string) error {
-	const op = "storage.postgres.runMigrations"
-
-	m, err := migrate.New("file:migrations", databaseURL)
-	if err != nil {
-		return fmt.Errorf("%s: failed to create migrate instance: %w", op, err)
-	}
-	defer m.Close()
-
-	if err := m.Up(); err != nil && err != migrate.ErrNoChange {
-		return fmt.Errorf("%s: failed to run migrations: %w", op, err)
-	}
-
-	return nil
-}
-
-func rollbackMigrations(databaseURL string) error {
-	m, err := migrate.New(
-		"file://./migrations",
-		databaseURL,
-	)
-	if err != nil {
-		return fmt.Errorf("failed to create migrate instance: %w", err)
-	}
-	defer m.Close()
-
-	err = m.Down()
-	if err == migrate.ErrNoChange {
-		return fmt.Errorf("failed to rollback migrations: %w", err)
-	}
-	if err != nil {
-		return fmt.Errorf("failed to rollback migrations: %w", err)
-	}
-
-	return nil
+	return user, nil
 }

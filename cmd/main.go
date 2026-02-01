@@ -11,7 +11,9 @@ import (
 	"user_advt/internal/handler"
 	"user_advt/internal/lib/logger"
 	"user_advt/internal/service"
-	"user_advt/internal/storage/user/postgres"
+
+	userpostgres "user_advt/internal/storage/user/postgres"
+	pgclient "user_advt/pkg/client/postgres"
 	"user_advt/pkg/hash"
 
 	"github.com/gin-gonic/gin"
@@ -25,7 +27,7 @@ func main() {
 	logger.Info("Init app", slog.String("env:", cfg.Env))
 
 	ctx := context.Background()
-	storage, err := postgres.NewStorage(ctx, &cfg, logger)
+	pool, err := pgclient.NewClient(ctx, cfg.DatabasePath)
 
 	if err != nil {
 		logger.Error("Failed to init storage", slog.String("error:", err.Error()))
@@ -35,7 +37,8 @@ func main() {
 	hasher := hash.NewSHA1Hasher(cfg.Auth.PasswordSalt)
 
 	tokenService := service.NewTokenService([]byte(cfg.Auth.JWTSecret), cfg.Auth.TokenTTL)
-	service := service.NewUserService(storage, hasher, tokenService)
+	userStorage := userpostgres.NewUserStorage(pool, logger)
+	service := service.NewUserService(userStorage, hasher, tokenService)
 
 	router := gin.Default()
 

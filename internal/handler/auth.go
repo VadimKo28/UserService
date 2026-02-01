@@ -43,7 +43,7 @@ func (r *handler) SignUp(c *gin.Context) {
 }	
 
 
-func (r *handler) SignIn(c * gin.Context) {
+func (r *handler) SignIn(c *gin.Context) {
 	var params SignInParams
 
 	if err := c.ShouldBindJSON(&params); err != nil {
@@ -65,4 +65,8 @@ func (r *handler) SignIn(c * gin.Context) {
 	  "token":  token,
 	})
 
+}
+
+func (r *handler) Refresh(c *gin.Context) {
+	
 }
