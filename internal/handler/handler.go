@@ -15,7 +15,9 @@ import (
 type UserService interface {
 	SignUpUser(ctx context.Context, name, email, password string) (int, error)
 	GetUser(ctx context.Context, id string) (users.User, error)
-	SignInUser(ctx context.Context, email, password string) (string, error)
+	SignInUser(ctx context.Context, email, password string) (string, string, error)
+	RefreshTokens(ctx context.Context, refreshToken string) (string, string, error)
+	LogOut(ctx context.Context, refreshToken string) error
 }
 
 type TokenService interface {
@@ -45,7 +47,8 @@ const (
 	userUrl       = "/users/:id"
 	signUpUserUrl = "/users/sign-up"
 	singInUserUrl = "/users/sign-in"
-	refreshUrl = "/refresh"
+	refreshUrl    = "/refresh"
+	logOutUrl     = "/logout"
 )
 
 func (h *handler) Register(router *gin.Engine) {
@@ -57,5 +60,6 @@ func (h *handler) Register(router *gin.Engine) {
 
 	router.POST(signUpUserUrl, h.SignUp)
 	router.POST(singInUserUrl, h.SignIn)
-	router.GET(refreshUrl, h.Refresh)
+	router.POST(refreshUrl, h.Refresh)
+	router.POST(logOutUrl, h.LogOut)
 }

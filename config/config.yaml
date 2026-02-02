@@ -10,3 +10,4 @@ http_server:
 
 auth: 
   token_ttl: 30m  
+  refresh_token_ttl: 720h

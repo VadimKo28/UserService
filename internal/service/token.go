@@ -1,8 +1,8 @@
 package service
 
 import (
+	"crypto/rand"
 	"fmt"
-	"math/rand"
 	"strconv"
 	"time"
 
@@ -18,22 +18,25 @@ func NewTokenService(jwtSecret []byte, tokenTTL time.Duration) *TokenService {
 	return &TokenService{jwtSecret: jwtSecret, tokenTTL: tokenTTL}
 }
 
-func (s *TokenService) SignToken(userID int) (string, error) {
+func (s *TokenService) GenerateTokens(userID int) (string, string, error) {
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.RegisteredClaims{
 		Subject:   strconv.Itoa(userID),
 		IssuedAt:  jwt.NewNumericDate(time.Now()),
 		ExpiresAt: jwt.NewNumericDate(time.Now().Add(s.tokenTTL)),
 	})
 
-	// accessToken := token.SignedString(s.jwtSecret)
+	accessToken, err := token.SignedString(s.jwtSecret)
+	if err != nil {
+		return "", "", err
+	}
 
-	// refreshToken, err := newRefreshToken()
+	refreshToken, err := newRefreshToken()
 
-	// if err != nil {
-	// 	return "", "", err
-	// }
+	if err != nil {
+		return "", "", err
+	}
 
-	return token.SignedString(s.jwtSecret) 
+	return accessToken, refreshToken, nil
 }
 
 func (s *TokenService) ParseToken(tokenString string) (string, error) {
@@ -53,13 +56,9 @@ func (s *TokenService) ParseToken(tokenString string) (string, error) {
 	return claims.Subject, nil
 }
 
-func newRefreshToken() (string, error){
-  b := make([]byte, 32)
-
-	s := rand.NewSource(time.Now().Unix())
-	r := rand.New(s)
-
-	if _, err := r.Read(b); err != nil {
+func newRefreshToken() (string, error) {
+	b := make([]byte, 32)
+	if _, err := rand.Read(b); err != nil {
 		return "", err
 	}
 

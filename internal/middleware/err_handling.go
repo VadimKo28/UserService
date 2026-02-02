@@ -55,6 +55,16 @@ func ErrorHandler() gin.HandlerFunc {
 				return
 			}
 
+			if errors.Is(err, storage.ErrRefreshTokenNotFound) || errors.Is(err, storage.ErrRefreshTokenExpired) {
+				c.JSON(http.StatusUnauthorized, map[string]any{
+					"success": false,
+					"message": err.Error(),
+					"status":  storage.StatusUnauthorized,
+				})
+
+				return
+			}
+
 			if errors.Is(err, storage.ErrForbidden) {
 				c.JSON(http.StatusForbidden, map[string]any{
 					"success": false,

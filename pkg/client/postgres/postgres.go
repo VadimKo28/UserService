@@ -7,11 +7,6 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
-// type Storage struct {
-// 	db     *pgxpool.Pool
-// 	logger *slog.Logger
-// }
-
 func NewClient(ctx context.Context, connStr string) (*pgxpool.Pool, error) {
 	const op = "pkg.client.postgres.NewClient"
 

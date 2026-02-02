@@ -2,7 +2,9 @@ package service
 
 import (
 	"context"
+	"time"
 	"user_advt/internal/domain/users"
+	"user_advt/internal/storage"
 )
 
 type UserStorage interface {
@@ -16,17 +18,37 @@ type PasswordHasher interface {
 }
 
 type TokenSigner interface {
-	SignToken(userID int) (string, error)
+	GenerateTokens(userID int) (string, string, error)
+}
+
+type RefreshTokenStorage interface {
+	Save(ctx context.Context, userID int, token string, expiresAt time.Time) error
+	Get(ctx context.Context, token string) (int, time.Time, error)
+	Delete(ctx context.Context, token string) error
 }
 
 type UserService struct {
-	storage      UserStorage
-	hasher       PasswordHasher
-	tokenService TokenSigner
+	storage         UserStorage
+	refreshStorage  RefreshTokenStorage
+	hasher          PasswordHasher
+	tokenService    TokenSigner
+	refreshTokenTTL time.Duration
 }
 
-func NewUserService(storage UserStorage, hasher PasswordHasher, tokenService TokenSigner) *UserService {
-	return &UserService{storage: storage, hasher: hasher, tokenService: tokenService}
+func NewUserService(
+	storage UserStorage,
+	refreshStorage RefreshTokenStorage,
+	hasher PasswordHasher,
+	tokenService TokenSigner,
+	refreshTokenTTL time.Duration,
+) *UserService {
+	return &UserService{
+		storage:         storage,
+		refreshStorage:  refreshStorage,
+		hasher:          hasher,
+		tokenService:    tokenService,
+		refreshTokenTTL: refreshTokenTTL,
+	}
 }
 
 func (s *UserService) SignUpUser(ctx context.Context, name, email, password string) (int, error) {
@@ -55,11 +77,11 @@ func (s *UserService) GetUser(ctx context.Context, id string) (users.User, error
 	return user, nil
 }
 
-func (s *UserService) SignInUser(ctx context.Context, email, password string) (string, error) {
+func (s *UserService) SignInUser(ctx context.Context, email, password string) (string, string, error) {
 	hashedPassword, err := s.hasher.Hash(password)
 
 	if err != nil {
-		return "", err
+		return "", "", err
 	}
 
 	userDTO := users.UserSignInDTO{
@@ -70,9 +92,53 @@ func (s *UserService) SignInUser(ctx context.Context, email, password string) (s
 	user, err := s.storage.GetByCredentials(ctx, &userDTO)
 
 	if err != nil {
-		return "", err
+		return "", "", err
 	}
 
-	return s.tokenService.SignToken(int(user.ID))
+	accessToken, refreshToken, err := s.tokenService.GenerateTokens(int(user.ID))
 
-}			
+	if err != nil {
+		return "", "", err
+	}
+
+	if err := s.refreshStorage.Save(ctx, int(user.ID), refreshToken, time.Now().Add(s.refreshTokenTTL)); err != nil {
+		return "", "", err
+	}
+
+	return accessToken, refreshToken, nil
+}
+
+func (s *UserService) RefreshTokens(ctx context.Context, refreshToken string) (string, string, error) {
+	userID, expiresAt, err := s.refreshStorage.Get(ctx, refreshToken)
+	if err != nil {
+		return "", "", err
+	}
+
+	if time.Now().After(expiresAt) {
+		_ = s.refreshStorage.Delete(ctx, refreshToken)
+		return "", "", storage.ErrRefreshTokenExpired
+	}
+
+	if err := s.refreshStorage.Delete(ctx, refreshToken); err != nil {
+		return "", "", err
+	}
+
+	accessToken, newRefreshToken, err := s.tokenService.GenerateTokens(userID)
+	if err != nil {
+		return "", "", err
+	}
+
+	if err := s.refreshStorage.Save(ctx, userID, newRefreshToken, time.Now().Add(s.refreshTokenTTL)); err != nil {
+		return "", "", err
+	}
+
+	return accessToken, newRefreshToken, nil
+}
+
+func (s *UserService) LogOut(ctx context.Context, refreshToken string) error {
+	if refreshToken == "" {
+		return storage.ErrRefreshTokenNotFound
+	}
+
+	return s.refreshStorage.Delete(ctx, refreshToken)
+}

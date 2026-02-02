@@ -1,6 +1,8 @@
 package storage
 
-import "errors"
+import (
+	"errors"
+)
 
 const (
 	StatusBadRequest          = 400
@@ -18,3 +20,5 @@ var ErrUserIDInvalidParams = errors.New("id params must be an integer")
 var ErrUserInvalidCredentials = errors.New("invalid email or password")
 var ErrUnauthorized = errors.New("authorization failed")
 var ErrForbidden = errors.New("forbidden")
+var ErrRefreshTokenNotFound = errors.New("refresh token not found")
+var ErrRefreshTokenExpired = errors.New("refresh token expired")

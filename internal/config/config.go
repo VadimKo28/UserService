@@ -17,9 +17,10 @@ type Config struct {
 }
 
 type Auth struct {
-	TokenTTL     time.Duration `yaml:"token_ttl" env-default:"15"`
-	JWTSecret    string        `yaml:"jwt_secret" env:"JWT_SECRET" env-required:"true"`
-	PasswordSalt string        `yaml:"password_salt" env:"SALT_HASH" env-required:"true"`
+	TokenTTL        time.Duration `yaml:"token_ttl" env-default:"15"`
+	RefreshTokenTTL time.Duration `yaml:"refresh_token_ttl" env-default:"720h"`
+	JWTSecret       string        `yaml:"jwt_secret" env:"JWT_SECRET" env-required:"true"`
+	PasswordSalt    string        `yaml:"password_salt" env:"SALT_HASH" env-required:"true"`
 }
 
 type HTTPServer struct {

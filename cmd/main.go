@@ -12,6 +12,7 @@ import (
 	"user_advt/internal/lib/logger"
 	"user_advt/internal/service"
 
+	tokenpostgres "user_advt/internal/storage/token/postgres"
 	userpostgres "user_advt/internal/storage/user/postgres"
 	pgclient "user_advt/pkg/client/postgres"
 	"user_advt/pkg/hash"
@@ -38,7 +39,8 @@ func main() {
 
 	tokenService := service.NewTokenService([]byte(cfg.Auth.JWTSecret), cfg.Auth.TokenTTL)
 	userStorage := userpostgres.NewUserStorage(pool, logger)
-	service := service.NewUserService(userStorage, hasher, tokenService)
+	tokenStorage := tokenpostgres.NewTokenStorage(pool, logger)
+	service := service.NewUserService(userStorage, tokenStorage, hasher, tokenService, cfg.Auth.RefreshTokenTTL)
 
 	router := gin.Default()
 

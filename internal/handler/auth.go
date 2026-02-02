@@ -18,6 +18,14 @@ type SignUpParams struct {
 	Password string `json:"password" binding:"required,min=6"`
 }
 
+type RefreshParams struct {
+	RefreshToken string `json:"refresh_token" binding:"required"`
+}
+
+type LogOutParams struct {
+	RefreshToken string `json:"refresh_token" binding:"required"`
+}
+
 func (r *handler) SignUp(c *gin.Context) {
 	var params SignUpParams
 
@@ -38,10 +46,9 @@ func (r *handler) SignUp(c *gin.Context) {
 
 	c.JSON(200, map[string]any{
 		"success": true,
-	  "user_id":  userID,
+		"user_id": userID,
 	})
-}	
-
+}
 
 func (r *handler) SignIn(c *gin.Context) {
 	var params SignInParams
@@ -52,8 +59,8 @@ func (r *handler) SignIn(c *gin.Context) {
 		return
 	}
 
-	token, err := r.service.SignInUser(c.Request.Context(), params.Email, params.Password)
-	
+	accessToken, refreshToken, err := r.service.SignInUser(c.Request.Context(), params.Email, params.Password)
+
 	if err != nil {
 		c.Error(err)
 		r.logger.Error("Failed to sign in user", slog.String("error:", err.Error()))
@@ -61,12 +68,52 @@ func (r *handler) SignIn(c *gin.Context) {
 	}
 
 	c.JSON(200, map[string]any{
-		"success": true,
-	  "token":  token,
+		"success":       true,
+		"access_token":  accessToken,
+		"refresh_token": refreshToken,
 	})
 
 }
 
+func (r *handler) LogOut(c *gin.Context) {
+	var params LogOutParams
+
+	if err := c.ShouldBindJSON(&params); err != nil {
+		c.Error(GetValidError(err))
+		r.logger.Error("Failed to bind JSON", slog.String("error:", GetValidError(err).ValidErr))
+		return
+	}
+
+	if err := r.service.LogOut(c.Request.Context(), params.RefreshToken); err != nil {
+		c.Error(err)
+		r.logger.Error("Failed to log out", slog.String("error:", err.Error()))
+		return
+	}
+
+	c.JSON(200, map[string]any{
+		"success": true,
+	})
+}
+
 func (r *handler) Refresh(c *gin.Context) {
-	
+	var params RefreshParams
+
+	if err := c.ShouldBindJSON(&params); err != nil {
+		c.Error(GetValidError(err))
+		r.logger.Error("Failed to bind JSON", slog.String("error:", GetValidError(err).ValidErr))
+		return
+	}
+
+	accessToken, refreshToken, err := r.service.RefreshTokens(c.Request.Context(), params.RefreshToken)
+	if err != nil {
+		c.Error(err)
+		r.logger.Error("Failed to refresh token", slog.String("error:", err.Error()))
+		return
+	}
+
+	c.JSON(200, map[string]any{
+		"success":       true,
+		"access_token":  accessToken,
+		"refresh_token": refreshToken,
+	})
 }
