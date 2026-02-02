@@ -40,11 +40,11 @@ func main() {
 	tokenService := service.NewTokenService([]byte(cfg.Auth.JWTSecret), cfg.Auth.TokenTTL)
 	userStorage := userpostgres.NewUserStorage(pool, logger)
 	tokenStorage := tokenpostgres.NewTokenStorage(pool, logger)
-	service := service.NewUserService(userStorage, tokenStorage, hasher, tokenService, cfg.Auth.RefreshTokenTTL)
+	userService := service.NewUserService(userStorage, tokenStorage, hasher, tokenService, cfg.Auth.RefreshTokenTTL)
 
 	router := gin.Default()
 
-	handler := handler.NewHandler(logger, service, tokenService)
+	handler := handler.NewHandler(logger, userService, tokenService)
 
 	handler.Register(router)
 

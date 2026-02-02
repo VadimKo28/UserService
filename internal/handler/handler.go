@@ -20,6 +20,7 @@ type UserService interface {
 	LogOut(ctx context.Context, refreshToken string) error
 }
 
+//go:generate mockery --name TokenService --output ./mocks --dir .
 type TokenService interface {
 	ParseToken(token string) (string, error)
 }

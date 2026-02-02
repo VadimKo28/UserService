@@ -29,16 +29,13 @@ func Authentication(h *handler) gin.HandlerFunc {
 			return
 		}
 
-		user, err := h.service.GetUser(c.Request.Context(), userId)
+		_, err = h.service.GetUser(c.Request.Context(), userId)
 		if err != nil {
 			h.logger.Error("Authorization failed", slog.String("error:", err.Error()))
 			c.Error(err)
 			c.Abort()
 			return
 		}
-
-		c.Set("user", user)
-		c.Set("userId", userId)
 
 		c.Next()
 	}
