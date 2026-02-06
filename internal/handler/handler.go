@@ -3,6 +3,7 @@ package handler
 import (
 	"context"
 	"log/slog"
+	"user_advt/internal/domain/subscription"
 	"user_advt/internal/domain/users"
 	"user_advt/internal/lib/api/response"
 	"user_advt/internal/middleware"
@@ -25,17 +26,26 @@ type TokenService interface {
 	ParseToken(token string) (string, error)
 }
 
-type handler struct {
-	logger       *slog.Logger
-	service      UserService
-	tokenService TokenService
+//go:generate mockery --name SubscriptionService --output ./mocks --dir .
+type SubscriptionService interface {
+	CreateSubscription(ctx context.Context, subscriptionDTO subscription.CreateSubscriptionDTO) (int, error)
+	GetSubscriptionsByUserID(ctx context.Context, userID, limit, offset int) ([]subscription.Subscription, error)
+	UpdateSubscription(ctx context.Context, subscriptionDTO subscription.UpdateSubscriptionDTO) error
 }
 
-func NewHandler(logger *slog.Logger, service UserService, tokenService TokenService) *handler {
+type handler struct {
+	logger              *slog.Logger
+	service             UserService
+	tokenService        TokenService
+	subscriptionService SubscriptionService
+}
+
+func NewHandler(logger *slog.Logger, service UserService, tokenService TokenService, subscriptionService SubscriptionService) *handler {
 	return &handler{
-		logger:       logger,
-		service:      service,
-		tokenService: tokenService,
+		logger:              logger,
+		service:             service,
+		tokenService:        tokenService,
+		subscriptionService: subscriptionService,
 	}
 }
 
@@ -45,11 +55,13 @@ func GetValidError(err error) *response.ValidError {
 }
 
 const (
-	userUrl       = "/users/:id"
-	signUpUserUrl = "/users/sign-up"
-	singInUserUrl = "/users/sign-in"
-	refreshUrl    = "/refresh"
-	logOutUrl     = "/logout"
+	userUrl               = "/users/:id"
+	signUpUserUrl         = "/users/sign-up"
+	singInUserUrl         = "/users/sign-in"
+	refreshUrl            = "/refresh"
+	logOutUrl             = "/logout"
+	createSubscriptionUrl = "/users/:id/subscriptions"
+	updateSubscriptionUrl = "/users/:id/subscriptions/:subscription_id"
 )
 
 func (h *handler) Register(router *gin.Engine) {
@@ -58,6 +70,9 @@ func (h *handler) Register(router *gin.Engine) {
 	api := router.Group("/api")
 	api.Use(Authentication(h))
 	api.GET(userUrl, h.GetUserById)
+	api.GET(createSubscriptionUrl, h.GetUserSubscriptions)
+	api.POST(createSubscriptionUrl, h.CreateUserSubscription)
+	api.PUT(updateSubscriptionUrl, h.UpdateUserSubscription)
 
 	router.POST(signUpUserUrl, h.SignUp)
 	router.POST(singInUserUrl, h.SignIn)

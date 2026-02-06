@@ -35,6 +35,26 @@ func ErrorHandler() gin.HandlerFunc {
 				return
 			}
 
+			if errors.Is(err, storage.ErrInvalidPaginationParams) {
+				c.JSON(http.StatusBadRequest, map[string]any{
+					"success": false,
+					"message": err.Error(),
+					"status":  storage.StatusBadRequest,
+				})
+
+				return
+			}
+
+			if errors.Is(err, storage.ErrSubscriptionIDInvalidParams) {
+				c.JSON(http.StatusBadRequest, map[string]any{
+					"success": false,
+					"message": err.Error(),
+					"status":  storage.StatusBadRequest,
+				})
+
+				return
+			}
+
 			if errors.Is(err, storage.ErrUserInvalidCredentials) {
 				c.JSON(http.StatusUnauthorized, map[string]any{
 					"success": false,
@@ -76,6 +96,16 @@ func ErrorHandler() gin.HandlerFunc {
 			}
 
 			if errors.Is(err, storage.ErrUserNotFount) {
+				c.JSON(http.StatusNotFound, map[string]any{
+					"success": false,
+					"message": err.Error(),
+					"status":  storage.StatusNotFound,
+				})
+
+				return
+			}
+
+			if errors.Is(err, storage.ErrSubscriptionNotFound) {
 				c.JSON(http.StatusNotFound, map[string]any{
 					"success": false,
 					"message": err.Error(),

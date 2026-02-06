@@ -125,7 +125,7 @@ func TestGetUserById(t *testing.T) {
 
 			logger := mock_logger.NewDiscardLogger()
 			router := gin.New()
-			h := NewHandler(logger, mockUserService, mockTokenService)
+			h := NewHandler(logger, mockUserService, mockTokenService, nil)
 			h.Register(router)
 
 			req := httptest.NewRequest(http.MethodGet, tc.path, nil)

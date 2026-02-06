@@ -115,7 +115,7 @@ func TestSignUp(t *testing.T) {
 
 			logger := mock_logger.NewDiscardLogger()
 			router := gin.New()
-			h := NewHandler(logger, mockUserService, nil)
+			h := NewHandler(logger, mockUserService, nil, nil)
 			h.Register(router)
 
 			body, err := json.Marshal(map[string]string{
@@ -235,7 +235,7 @@ func TestSignIn(t *testing.T) {
 
 			logger := mock_logger.NewDiscardLogger()
 			router := gin.New()
-			h := NewHandler(logger, mockUserService, nil)
+			h := NewHandler(logger, mockUserService, nil, nil)
 			h.Register(router)
 
 			body, err := json.Marshal(map[string]string{
@@ -324,7 +324,7 @@ func TestLogOut(t *testing.T) {
 
 			logger := mock_logger.NewDiscardLogger()
 			router := gin.New()
-			h := NewHandler(logger, mockUserService, nil)
+			h := NewHandler(logger, mockUserService, nil, nil)
 			h.Register(router)
 
 			body, err := json.Marshal(map[string]string{
@@ -424,7 +424,7 @@ func TestRefresh(t *testing.T) {
 
 			logger := mock_logger.NewDiscardLogger()
 			router := gin.New()
-			h := NewHandler(logger, mockUserService, nil)
+			h := NewHandler(logger, mockUserService, nil, nil)
 			h.Register(router)
 
 			body, err := json.Marshal(map[string]string{
