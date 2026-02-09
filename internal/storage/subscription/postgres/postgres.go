@@ -43,9 +43,19 @@ func (s *Storage) Save(ctx context.Context, subscriptionDto subscription.CreateS
 
 		var pgErr *pgconn.PgError
 
-		if errors.As(err, &pgErr) && pgErr.Code == "23505" {
-			s.logger.Error(errorMsg, slog.String("error", pgErr.Detail))
-			return 0, storage.ErrInternalServerError
+		if errors.As(err, &pgErr) {
+			if pgErr.Code == "23505" {
+				// TODO Сейчас ошибка 23505 никогда не случится при создании подписки,
+				// т.к. это unique_violation, такого ограничения для подписок в базе нет,
+				// можно убрать эту ветку с проверкой,
+				// но пока просто оставлю на будущее
+				s.logger.Error(errorMsg, slog.String("error", pgErr.Detail))
+				return 0, storage.ErrInternalServerError
+			}
+			if pgErr.Code == "23503" {
+				s.logger.Error(errorMsg, slog.String("error", pgErr.Detail))
+				return 0, storage.ErrUserNotFount
+			}
 		}
 
 		s.logger.Error(errorMsg, slog.String("error", err.Error()))
