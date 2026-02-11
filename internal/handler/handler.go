@@ -1,12 +1,12 @@
 package handler
 
 import (
+	"app/internal/domain/subscription"
+	"app/internal/domain/users"
+	"app/internal/lib/api/response"
+	"app/internal/middleware"
 	"context"
 	"log/slog"
-	"user_advt/internal/domain/subscription"
-	"user_advt/internal/domain/users"
-	"user_advt/internal/lib/api/response"
-	"user_advt/internal/middleware"
 
 	"github.com/gin-gonic/gin"
 	"github.com/go-playground/validator/v10"

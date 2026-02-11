@@ -1,13 +1,13 @@
 package handler
 
 import (
+	"app/internal/domain/subscription"
+	"app/internal/storage"
 	"fmt"
 	"log/slog"
 	"net/http"
 	"strconv"
 	"time"
-	"user_advt/internal/domain/subscription"
-	"user_advt/internal/storage"
 
 	"github.com/gin-gonic/gin"
 )

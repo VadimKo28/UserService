@@ -1,8 +1,8 @@
 package handler
 
 import (
+	"app/internal/storage"
 	"strconv"
-	"user_advt/internal/storage"
 
 	"github.com/gin-gonic/gin"
 )
@@ -24,7 +24,7 @@ func (h *handler) GetUserById(c *gin.Context) {
 
 	c.JSON(200, map[string]any{
 		"success": true,
-	  "name": user.Name,
-		"email": user.Email,
-	})	
+		"name":    user.Name,
+		"email":   user.Email,
+	})
 }

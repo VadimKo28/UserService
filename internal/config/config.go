@@ -14,6 +14,7 @@ type Config struct {
 	DatabasePath string     `yaml:"database_path" env:"DATABASE_URL" env-required:"true"`
 	HTTPServer   HTTPServer `yaml:"http_server"`
 	Auth         Auth       `yaml:"auth"`
+	Kafka        Kafka      `yaml:"kafka"`
 }
 
 type Auth struct {
@@ -28,6 +29,11 @@ type HTTPServer struct {
 	Port        string        `yaml:"port" env-default:"8081"`
 	Timeout     time.Duration `yaml:"timeout" env-default:"4"`
 	IdleTimeout time.Duration `yaml:"idle_timeout" env-default:"60"`
+}
+
+type Kafka struct {
+	Brokers           []string `yaml:"brokers" env:"KAFKA_BROKERS" env-separator:","`
+	SubscriptionTopic string   `yaml:"subscription_topic" env:"KAFKA_SUBSCRIPTION_TOPIC" env-default:"subscription-events"`
 }
 
 func MustLoad() Config {

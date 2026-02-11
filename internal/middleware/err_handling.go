@@ -1,10 +1,10 @@
 package middleware
 
 import (
+	"app/internal/lib/api/response"
+	"app/internal/storage"
 	"errors"
 	"net/http"
-	"user_advt/internal/lib/api/response"
-	"user_advt/internal/storage"
 
 	"github.com/gin-gonic/gin"
 )

@@ -6,10 +6,10 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"user_advt/internal/domain/users"
-	mock_service "user_advt/internal/handler/mocks"
-	mock_logger "user_advt/internal/lib/logger/handlers"
-	"user_advt/internal/storage"
+	"app/internal/domain/users"
+	mock_service "app/internal/handler/mocks"
+	mock_logger "app/internal/lib/logger/handlers"
+	"app/internal/storage"
 
 	"github.com/gin-gonic/gin"
 	"github.com/go-openapi/testify/v2/require"

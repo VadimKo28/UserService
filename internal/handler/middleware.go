@@ -1,10 +1,10 @@
 package handler
 
 import (
+	"app/internal/storage"
 	"errors"
 	"log/slog"
 	"strings"
-	"user_advt/internal/storage"
 
 	"github.com/gin-gonic/gin"
 )

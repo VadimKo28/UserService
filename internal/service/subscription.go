@@ -1,8 +1,9 @@
 package service
 
 import (
+	"app/internal/domain/subscription"
 	"context"
-	"user_advt/internal/domain/subscription"
+	"log/slog"
 )
 
 type SubscriptionStorage interface {
@@ -11,16 +12,34 @@ type SubscriptionStorage interface {
 	Update(ctx context.Context, subscriptionDTO subscription.UpdateSubscriptionDTO) error
 }
 
-type SubscriptionService struct {
-	storage SubscriptionStorage
+type SubscriptionEventPublisher interface {
+	Publish(ctx context.Context, event subscription.Event) error
+	Close() error
 }
 
-func NewSubscriptionService(storage SubscriptionStorage) *SubscriptionService {
-	return &SubscriptionService{storage: storage}
+type SubscriptionService struct {
+	storage   SubscriptionStorage
+	publisher SubscriptionEventPublisher
+	logger    *slog.Logger
+}
+
+func NewSubscriptionService(storage SubscriptionStorage, publisher SubscriptionEventPublisher, logger *slog.Logger) *SubscriptionService {
+	return &SubscriptionService{
+		storage:   storage,
+		publisher: publisher,
+		logger:    logger,
+	}
 }
 
 func (s *SubscriptionService) CreateSubscription(ctx context.Context, subscriptionDTO subscription.CreateSubscriptionDTO) (int, error) {
-	return s.storage.Save(ctx, subscriptionDTO)
+	id, err := s.storage.Save(ctx, subscriptionDTO)
+	if err != nil {
+		return 0, err
+	}
+
+	s.publishEvent(ctx, subscription.NewCreatedEvent(id, subscriptionDTO))
+
+	return id, nil
 }
 
 func (s *SubscriptionService) GetSubscriptionsByUserID(ctx context.Context, userID, limit, offset int) ([]subscription.Subscription, error) {
@@ -28,5 +47,21 @@ func (s *SubscriptionService) GetSubscriptionsByUserID(ctx context.Context, user
 }
 
 func (s *SubscriptionService) UpdateSubscription(ctx context.Context, subscriptionDTO subscription.UpdateSubscriptionDTO) error {
-	return s.storage.Update(ctx, subscriptionDTO)
+	if err := s.storage.Update(ctx, subscriptionDTO); err != nil {
+		return err
+	}
+
+	s.publishEvent(ctx, subscription.NewUpdatedEvent(subscriptionDTO))
+
+	return nil
+}
+
+func (s *SubscriptionService) publishEvent(ctx context.Context, event subscription.Event) {
+	if s.publisher == nil {
+		return
+	}
+
+	if err := s.publisher.Publish(ctx, event); err != nil && s.logger != nil {
+		s.logger.Error("failed to publish subscription event", slog.String("error", err.Error()))
+	}
 }

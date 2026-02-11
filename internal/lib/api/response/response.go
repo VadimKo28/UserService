@@ -1,19 +1,19 @@
 package response
 
 import (
+	"app/internal/storage"
 	"strings"
-	"user_advt/internal/storage"
 
 	"github.com/go-playground/validator/v10"
 )
 
 type ValidError struct {
 	ValidErr string
-	Status int
+	Status   int
 }
 
 func (v *ValidError) Error() string {
-  return v.ValidErr
+	return v.ValidErr
 }
 
 func ValidationError(errs validator.ValidationErrors) *ValidError {
@@ -38,7 +38,7 @@ func ValidationError(errs validator.ValidationErrors) *ValidError {
 
 	validateErr := ValidError{
 		ValidErr: strings.Join(errorMsg, ", "),
-	  Status: storage.StatusUnprocessableEntity,
+		Status:   storage.StatusUnprocessableEntity,
 	}
 
 	return &validateErr

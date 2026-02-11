@@ -1,10 +1,10 @@
 package service
 
 import (
+	"app/internal/domain/users"
+	"app/internal/storage"
 	"context"
 	"time"
-	"user_advt/internal/domain/users"
-	"user_advt/internal/storage"
 )
 
 type UserStorage interface {

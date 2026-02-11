@@ -1,12 +1,12 @@
 package postgres
 
 import (
+	"app/internal/domain/subscription"
+	"app/internal/storage"
 	"context"
 	"database/sql"
 	"errors"
 	"log/slog"
-	"user_advt/internal/domain/subscription"
-	"user_advt/internal/storage"
 
 	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgxpool"

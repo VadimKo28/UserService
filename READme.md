@@ -1,2 +1,2 @@
-# Запуск sudo docker compose up --build
-# Стоп sudo docker compose down
+## Запуск docker compose up --build
+## Стоп docker compose down

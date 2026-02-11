@@ -1,25 +1,12 @@
 package main
 
 import (
-	"context"
-	"fmt"
+	"app/internal/app"
+	"app/internal/config"
+	"app/internal/lib/logger"
 	"log"
 	"log/slog"
-	"net/http"
 	"os"
-	"user_advt/internal/config"
-	"user_advt/internal/handler"
-	"user_advt/internal/lib/logger"
-	"user_advt/internal/service"
-
-	subscriptionpostgres "user_advt/internal/storage/subscription/postgres"
-	tokenpostgres "user_advt/internal/storage/token/postgres"
-	userpostgres "user_advt/internal/storage/user/postgres"
-
-	pgclient "user_advt/pkg/client/postgres"
-	"user_advt/pkg/hash"
-
-	"github.com/gin-gonic/gin"
 )
 
 func main() {
@@ -29,38 +16,21 @@ func main() {
 	logger := logger.LoggerSetup(cfg.Env)
 	logger.Info("Init app", slog.String("env:", cfg.Env))
 
-	ctx := context.Background()
-	pool, err := pgclient.NewClient(ctx, cfg.DatabasePath)
-
+	srv, cleanup, err := app.BuildServer(cfg, logger)
 	if err != nil {
 		logger.Error("Failed to init storage", slog.String("error:", err.Error()))
 		os.Exit(1)
 	}
-
-	hasher := hash.NewSHA1Hasher(cfg.Auth.PasswordSalt)
-
-	tokenService := service.NewTokenService([]byte(cfg.Auth.JWTSecret), cfg.Auth.TokenTTL)
-	userStorage := userpostgres.NewUserStorage(pool, logger)
-	tokenStorage := tokenpostgres.NewTokenStorage(pool, logger)
-	subscriptionStorage := subscriptionpostgres.NewSubscriptionStorage(pool, logger)
-	userService := service.NewUserService(userStorage, tokenStorage, hasher, tokenService, cfg.Auth.RefreshTokenTTL)
-	subscriptionService := service.NewSubscriptionService(subscriptionStorage)
-
-	router := gin.Default()
-
-	handler := handler.NewHandler(logger, userService, tokenService, subscriptionService)
-
-	handler.Register(router)
+	defer func() {
+		if cleanup == nil {
+			return
+		}
+		if err := cleanup(); err != nil {
+			logger.Error("Failed to close subscription publisher", slog.String("error:", err.Error()))
+		}
+	}()
 
 	logger.Info("Starting server on port: " + cfg.HTTPServer.Port)
-
-	srv := &http.Server{
-		Addr:         fmt.Sprintf(":%s", cfg.HTTPServer.Port),
-		Handler:      router.Handler(),
-		ReadTimeout:  cfg.HTTPServer.Timeout,
-		WriteTimeout: cfg.HTTPServer.Timeout,
-		IdleTimeout:  cfg.HTTPServer.IdleTimeout,
-	}
 
 	if err := srv.ListenAndServe(); err != nil {
 		logger.Error("Failed to start server", slog.String("error:", err.Error()))
