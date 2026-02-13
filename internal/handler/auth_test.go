@@ -34,6 +34,8 @@ func TestSignUp(t *testing.T) {
 		password          string
 		mockError         error
 		mockUserID        int
+		mockAccessToken   string
+		mockRefreshToken  string
 		expectedStatus    int
 		expectedSuccess   bool
 		expectedErrMsg    string
@@ -45,6 +47,8 @@ func TestSignUp(t *testing.T) {
 			email:             "test@mail.ru",
 			password:          "test123",
 			mockUserID:        10,
+			mockAccessToken:   "access-token",
+			mockRefreshToken:  "refresh-token",
 			expectedStatus:    http.StatusOK,
 			expectedSuccess:   true,
 			expectServiceCall: true,
@@ -108,8 +112,8 @@ func TestSignUp(t *testing.T) {
 
 			if tc.expectServiceCall {
 				mockUserService.
-					On("SignUpUser", mock.Anything, tc.name, tc.email, tc.password).
-					Return(tc.mockUserID, tc.mockError).
+					On("SignUpUserWithTokens", mock.Anything, tc.name, tc.email, tc.password).
+					Return(tc.mockUserID, tc.mockAccessToken, tc.mockRefreshToken, tc.mockError).
 					Once()
 			}
 
@@ -138,12 +142,15 @@ func TestSignUp(t *testing.T) {
 			assert.Equal(t, tc.expectedSuccess, resp.Success)
 			if tc.expectedSuccess {
 				assert.Equal(t, tc.mockUserID, resp.UserID)
+				cookies := rec.Result().Cookies()
+				assertCookieValue(t, cookies, "access_token", tc.mockAccessToken)
+				assertCookieValue(t, cookies, "refresh_token", tc.mockRefreshToken)
 			} else if tc.expectedErrMsg != "" {
 				assert.Equal(t, tc.expectedErrMsg, resp.Message)
 			}
 
 			if !tc.expectServiceCall {
-				mockUserService.AssertNotCalled(t, "SignUpUser", mock.Anything, mock.Anything, mock.Anything, mock.Anything)
+				mockUserService.AssertNotCalled(t, "SignUpUserWithTokens", mock.Anything, mock.Anything, mock.Anything, mock.Anything)
 			}
 		})
 	}
@@ -153,11 +160,9 @@ func TestSignIn(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 
 	type response struct {
-		Success      bool   `json:"success"`
-		AccessToken  string `json:"access_token,omitempty"`
-		RefreshToken string `json:"refresh_token,omitempty"`
-		Message      string `json:"message,omitempty"`
-		Status       int    `json:"status,omitempty"`
+		Success bool   `json:"success"`
+		Message string `json:"message,omitempty"`
+		Status  int    `json:"status,omitempty"`
 	}
 
 	testCases := []struct {
@@ -256,8 +261,9 @@ func TestSignIn(t *testing.T) {
 			require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &resp))
 			assert.Equal(t, tc.expectedSuccess, resp.Success)
 			if tc.expectedSuccess {
-				assert.Equal(t, tc.mockAccessToken, resp.AccessToken)
-				assert.Equal(t, tc.mockRefreshToken, resp.RefreshToken)
+				cookies := rec.Result().Cookies()
+				assertCookieValue(t, cookies, "access_token", tc.mockAccessToken)
+				assertCookieValue(t, cookies, "refresh_token", tc.mockRefreshToken)
 			} else if tc.expectedErrMsg != "" {
 				assert.Equal(t, tc.expectedErrMsg, resp.Message)
 			}
@@ -358,11 +364,9 @@ func TestRefresh(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 
 	type response struct {
-		Success      bool   `json:"success"`
-		AccessToken  string `json:"access_token,omitempty"`
-		RefreshToken string `json:"refresh_token,omitempty"`
-		Message      string `json:"message,omitempty"`
-		Status       int    `json:"status,omitempty"`
+		Success bool   `json:"success"`
+		Message string `json:"message,omitempty"`
+		Status  int    `json:"status,omitempty"`
 	}
 
 	testCases := []struct {
@@ -444,8 +448,9 @@ func TestRefresh(t *testing.T) {
 			require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &resp))
 			assert.Equal(t, tc.expectedSuccess, resp.Success)
 			if tc.expectedSuccess {
-				assert.Equal(t, tc.mockAccessToken, resp.AccessToken)
-				assert.Equal(t, tc.mockRefreshToken, resp.RefreshToken)
+				cookies := rec.Result().Cookies()
+				assertCookieValue(t, cookies, "access_token", tc.mockAccessToken)
+				assertCookieValue(t, cookies, "refresh_token", tc.mockRefreshToken)
 			} else if tc.expectedErrMsg != "" {
 				assert.Equal(t, tc.expectedErrMsg, resp.Message)
 			}
@@ -455,4 +460,15 @@ func TestRefresh(t *testing.T) {
 			}
 		})
 	}
+}
+
+func assertCookieValue(t *testing.T, cookies []*http.Cookie, name, expected string) {
+	t.Helper()
+	for _, cookie := range cookies {
+		if cookie.Name == name {
+			assert.Equal(t, expected, cookie.Value)
+			return
+		}
+	}
+	assert.Fail(t, "cookie not found", "expected cookie %s", name)
 }

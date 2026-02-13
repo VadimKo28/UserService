@@ -42,8 +42,20 @@ func Authentication(h *handler) gin.HandlerFunc {
 }
 
 func getToken(c *gin.Context) (string, error) {
-	header := c.Request.Header.Get("Authorization")
+	if token, err := tokenFromHeader(c); err == nil {
+		return token, nil
+	}
 
+	token, err := c.Cookie(accessTokenCookie)
+	if err == nil && token != "" {
+		return token, nil
+	}
+
+	return "", errors.New("Authorization header is empty")
+}
+
+func tokenFromHeader(c *gin.Context) (string, error) {
+	header := c.Request.Header.Get("Authorization")
 	if header == "" {
 		return "", errors.New("Authorization header is empty")
 	}

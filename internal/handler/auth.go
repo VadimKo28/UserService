@@ -26,6 +26,11 @@ type LogOutParams struct {
 	RefreshToken string `json:"refresh_token" binding:"required"`
 }
 
+const (
+	accessTokenCookie  = "access_token"
+	refreshTokenCookie = "refresh_token"
+)
+
 func (r *handler) SignUp(c *gin.Context) {
 	var params SignUpParams
 
@@ -37,17 +42,25 @@ func (r *handler) SignUp(c *gin.Context) {
 
 	r.logger.Info("Binded JSON successfully", slog.String("request:", fmt.Sprintf("%+v", params)))
 
-	userID, err := r.service.SignUpUser(c.Request.Context(), params.Name, params.Email, params.Password)
+	userID, accessToken, refreshToken, err := r.service.SignUpUserWithTokens(
+		c.Request.Context(),
+		params.Name,
+		params.Email,
+		params.Password,
+	)
 	if err != nil {
 		c.Error(err)
 		r.logger.Error("Failed to sign up user", slog.String("error:", err.Error()))
 		return
 	}
 
+	setAuthCookies(c, accessToken, refreshToken)
+
 	c.JSON(200, map[string]any{
 		"success": true,
 		"user_id": userID,
 	})
+
 }
 
 func (r *handler) SignIn(c *gin.Context) {
@@ -67,28 +80,33 @@ func (r *handler) SignIn(c *gin.Context) {
 		return
 	}
 
+	setAuthCookies(c, accessToken, refreshToken)
+
 	c.JSON(200, map[string]any{
-		"success":       true,
-		"access_token":  accessToken,
-		"refresh_token": refreshToken,
+		"success": true,
 	})
 
 }
 
 func (r *handler) LogOut(c *gin.Context) {
-	var params LogOutParams
-
-	if err := c.ShouldBindJSON(&params); err != nil {
-		c.Error(GetValidError(err))
-		r.logger.Error("Failed to bind JSON", slog.String("error:", GetValidError(err).ValidErr))
-		return
+	refreshToken := getRefreshTokenFromCookie(c)
+	if refreshToken == "" {
+		var params LogOutParams
+		if err := c.ShouldBindJSON(&params); err != nil {
+			c.Error(GetValidError(err))
+			r.logger.Error("Failed to bind JSON", slog.String("error:", GetValidError(err).ValidErr))
+			return
+		}
+		refreshToken = params.RefreshToken
 	}
 
-	if err := r.service.LogOut(c.Request.Context(), params.RefreshToken); err != nil {
+	if err := r.service.LogOut(c.Request.Context(), refreshToken); err != nil {
 		c.Error(err)
 		r.logger.Error("Failed to log out", slog.String("error:", err.Error()))
 		return
 	}
+
+	clearAuthCookies(c)
 
 	c.JSON(200, map[string]any{
 		"success": true,
@@ -96,24 +114,45 @@ func (r *handler) LogOut(c *gin.Context) {
 }
 
 func (r *handler) Refresh(c *gin.Context) {
-	var params RefreshParams
-
-	if err := c.ShouldBindJSON(&params); err != nil {
-		c.Error(GetValidError(err))
-		r.logger.Error("Failed to bind JSON", slog.String("error:", GetValidError(err).ValidErr))
-		return
+	refreshToken := getRefreshTokenFromCookie(c)
+	if refreshToken == "" {
+		var params RefreshParams
+		if err := c.ShouldBindJSON(&params); err != nil {
+			c.Error(GetValidError(err))
+			r.logger.Error("Failed to bind JSON", slog.String("error:", GetValidError(err).ValidErr))
+			return
+		}
+		refreshToken = params.RefreshToken
 	}
 
-	accessToken, refreshToken, err := r.service.RefreshTokens(c.Request.Context(), params.RefreshToken)
+	accessToken, refreshToken, err := r.service.RefreshTokens(c.Request.Context(), refreshToken)
 	if err != nil {
 		c.Error(err)
 		r.logger.Error("Failed to refresh token", slog.String("error:", err.Error()))
 		return
 	}
 
+	setAuthCookies(c, accessToken, refreshToken)
+
 	c.JSON(200, map[string]any{
-		"success":       true,
-		"access_token":  accessToken,
-		"refresh_token": refreshToken,
+		"success": true,
 	})
+}
+
+func setAuthCookies(c *gin.Context, accessToken, refreshToken string) {
+	c.SetCookie(accessTokenCookie, accessToken, 0, "/", "", false, true)
+	c.SetCookie(refreshTokenCookie, refreshToken, 0, "/", "", false, true)
+}
+
+func clearAuthCookies(c *gin.Context) {
+	c.SetCookie(accessTokenCookie, "", -1, "/", "", false, true)
+	c.SetCookie(refreshTokenCookie, "", -1, "/", "", false, true)
+}
+
+func getRefreshTokenFromCookie(c *gin.Context) string {
+	token, err := c.Cookie(refreshTokenCookie)
+	if err != nil {
+		return ""
+	}
+	return token
 }

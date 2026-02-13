@@ -66,6 +66,24 @@ func (s *UserService) SignUpUser(ctx context.Context, name, email, password stri
 	return s.storage.Save(ctx, &user)
 }
 
+func (s *UserService) SignUpUserWithTokens(ctx context.Context, name, email, password string) (int, string, string, error) {
+	userID, err := s.SignUpUser(ctx, name, email, password)
+	if err != nil {
+		return 0, "", "", err
+	}
+
+	accessToken, refreshToken, err := s.tokenService.GenerateTokens(userID)
+	if err != nil {
+		return 0, "", "", err
+	}
+
+	if err := s.refreshStorage.Save(ctx, userID, refreshToken, time.Now().Add(s.refreshTokenTTL)); err != nil {
+		return 0, "", "", err
+	}
+
+	return userID, accessToken, refreshToken, nil
+}
+
 func (s *UserService) GetUser(ctx context.Context, id string) (users.User, error) {
 
 	user, err := s.storage.Get(ctx, id)

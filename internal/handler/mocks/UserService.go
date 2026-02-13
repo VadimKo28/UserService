@@ -159,6 +159,48 @@ func (_m *UserService) SignUpUser(ctx context.Context, name string, email string
 	return r0, r1
 }
 
+// SignUpUserWithTokens provides a mock function with given fields: ctx, name, email, password
+func (_m *UserService) SignUpUserWithTokens(ctx context.Context, name string, email string, password string) (int, string, string, error) {
+	ret := _m.Called(ctx, name, email, password)
+
+	if len(ret) == 0 {
+		panic("no return value specified for SignUpUserWithTokens")
+	}
+
+	var r0 int
+	var r1 string
+	var r2 string
+	var r3 error
+	if rf, ok := ret.Get(0).(func(context.Context, string, string, string) (int, string, string, error)); ok {
+		return rf(ctx, name, email, password)
+	}
+	if rf, ok := ret.Get(0).(func(context.Context, string, string, string) int); ok {
+		r0 = rf(ctx, name, email, password)
+	} else {
+		r0 = ret.Get(0).(int)
+	}
+
+	if rf, ok := ret.Get(1).(func(context.Context, string, string, string) string); ok {
+		r1 = rf(ctx, name, email, password)
+	} else {
+		r1 = ret.Get(1).(string)
+	}
+
+	if rf, ok := ret.Get(2).(func(context.Context, string, string, string) string); ok {
+		r2 = rf(ctx, name, email, password)
+	} else {
+		r2 = ret.Get(2).(string)
+	}
+
+	if rf, ok := ret.Get(3).(func(context.Context, string, string, string) error); ok {
+		r3 = rf(ctx, name, email, password)
+	} else {
+		r3 = ret.Error(3)
+	}
+
+	return r0, r1, r2, r3
+}
+
 // NewUserService creates a new instance of UserService. It also registers a testing interface on the mock and a cleanup function to assert the mocks expectations.
 // The first argument is typically a *testing.T value.
 func NewUserService(t interface {

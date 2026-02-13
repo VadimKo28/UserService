@@ -7,7 +7,9 @@ import (
 	"app/internal/middleware"
 	"context"
 	"log/slog"
+	"time"
 
+	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 	"github.com/go-playground/validator/v10"
 )
@@ -15,6 +17,7 @@ import (
 //go:generate mockery --name UserService --output ./mocks --dir .
 type UserService interface {
 	SignUpUser(ctx context.Context, name, email, password string) (int, error)
+	SignUpUserWithTokens(ctx context.Context, name, email, password string) (int, string, string, error)
 	GetUser(ctx context.Context, id string) (users.User, error)
 	SignInUser(ctx context.Context, email, password string) (string, string, error)
 	RefreshTokens(ctx context.Context, refreshToken string) (string, string, error)
@@ -66,6 +69,17 @@ const (
 
 func (h *handler) Register(router *gin.Engine) {
 	router.Use(middleware.ErrorHandler())
+	router.Use(cors.New(cors.Config{
+		AllowOrigins:     []string{"http://localhost:3010"},
+		AllowMethods:     []string{"PUT", "PATCH", "POST", "GET", "DELETE"},
+		AllowHeaders:     []string{"Origin", "Content-Type", "Authorization"},
+		ExposeHeaders:    []string{"Content-Length", "Authorization"},
+		AllowCredentials: true,
+		AllowOriginFunc: func(origin string) bool {
+			return origin == "*"
+		},
+		MaxAge: 12 * time.Hour,
+	}))
 
 	api := router.Group("/api")
 	api.Use(Authentication(h))
