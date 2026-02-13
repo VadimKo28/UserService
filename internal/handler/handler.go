@@ -63,20 +63,20 @@ const (
 	singInUserUrl         = "/users/sign-in"
 	refreshUrl            = "/refresh"
 	logOutUrl             = "/logout"
-	createSubscriptionUrl = "/users/:id/subscriptions"
+	userSubscriptionsUrl = "/users/:id/subscriptions"
 	updateSubscriptionUrl = "/users/:id/subscriptions/:subscription_id"
 )
 
 func (h *handler) Register(router *gin.Engine) {
 	router.Use(middleware.ErrorHandler())
 	router.Use(cors.New(cors.Config{
-		AllowOrigins:     []string{"http://localhost:3010"},
+		AllowOrigins:     []string{"http://194.156.66.86"},
 		AllowMethods:     []string{"PUT", "PATCH", "POST", "GET", "DELETE"},
 		AllowHeaders:     []string{"Origin", "Content-Type", "Authorization"},
 		ExposeHeaders:    []string{"Content-Length", "Authorization"},
 		AllowCredentials: true,
 		AllowOriginFunc: func(origin string) bool {
-			return origin == "*"
+			return origin == "http://194.156.66.86"
 		},
 		MaxAge: 12 * time.Hour,
 	}))
@@ -84,8 +84,8 @@ func (h *handler) Register(router *gin.Engine) {
 	api := router.Group("/api")
 	api.Use(Authentication(h))
 	api.GET(userUrl, h.GetUserById)
-	api.GET(createSubscriptionUrl, h.GetUserSubscriptions)
-	api.POST(createSubscriptionUrl, h.CreateUserSubscription)
+	api.GET(userSubscriptionsUrl, h.GetUserSubscriptions)
+	api.POST(userSubscriptionsUrl, h.CreateUserSubscription)
 	api.PUT(updateSubscriptionUrl, h.UpdateUserSubscription)
 
 	router.POST(signUpUserUrl, h.SignUp)
