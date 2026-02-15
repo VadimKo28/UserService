@@ -17,6 +17,26 @@ services:
       retries: 20
       start_period: 10s
 
+  redpanda:
+    image: docker.redpanda.com/redpandadata/redpanda:v24.2.1
+    container_name: user_advt_redpanda
+    command:
+      - redpanda
+      - start
+      - --smp
+      - "1"
+      - --memory
+      - "1G"
+      - --overprovisioned
+      - --node-id
+      - "0"
+      - --kafka-addr
+      - "PLAINTEXT://0.0.0.0:9092"
+      - --advertise-kafka-addr
+      - "PLAINTEXT://redpanda:9092"
+    ports:
+      - "9092:9092"
+
   migrate:
     build:
       context: .
@@ -38,6 +58,8 @@ services:
     depends_on:
       migrate:
         condition: service_completed_successfully
+      redpanda:
+        condition: service_started
     env_file:
       - .env
     volumes:
