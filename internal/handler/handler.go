@@ -63,7 +63,7 @@ const (
 	singInUserUrl         = "/users/sign-in"
 	refreshUrl            = "/refresh"
 	logOutUrl             = "/logout"
-	userSubscriptionsUrl = "/users/:id/subscriptions"
+	userSubscriptionsUrl  = "/users/:id/subscriptions"
 	updateSubscriptionUrl = "/users/:id/subscriptions/:subscription_id"
 )
 
@@ -82,14 +82,16 @@ func (h *handler) Register(router *gin.Engine) {
 	}))
 
 	api := router.Group("/api")
-	api.Use(Authentication(h))
-	api.GET(userUrl, h.GetUserById)
-	api.GET(userSubscriptionsUrl, h.GetUserSubscriptions)
-	api.POST(userSubscriptionsUrl, h.CreateUserSubscription)
-	api.PUT(updateSubscriptionUrl, h.UpdateUserSubscription)
+	public := api.Group("")
+	public.POST(signUpUserUrl, h.SignUp)
+	public.POST(singInUserUrl, h.SignIn)
+	public.POST(refreshUrl, h.Refresh)
+	public.POST(logOutUrl, h.LogOut)
 
-	router.POST(signUpUserUrl, h.SignUp)
-	router.POST(singInUserUrl, h.SignIn)
-	router.POST(refreshUrl, h.Refresh)
-	router.POST(logOutUrl, h.LogOut)
+	protected := api.Group("")
+	protected.Use(Authentication(h))
+	protected.GET(userUrl, h.GetUserById)
+	protected.GET(userSubscriptionsUrl, h.GetUserSubscriptions)
+	protected.POST(userSubscriptionsUrl, h.CreateUserSubscription)
+	protected.PUT(updateSubscriptionUrl, h.UpdateUserSubscription)
 }
