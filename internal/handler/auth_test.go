@@ -129,7 +129,7 @@ func TestSignUp(t *testing.T) {
 			})
 			require.NoError(t, err)
 
-			req := httptest.NewRequest(http.MethodPost, "/users/sign-up", bytes.NewBuffer(body))
+			req := httptest.NewRequest(http.MethodPost, "/api/users/sign-up", bytes.NewBuffer(body))
 			req.Header.Set("Content-Type", "application/json")
 			rec := httptest.NewRecorder()
 
@@ -249,7 +249,7 @@ func TestSignIn(t *testing.T) {
 			})
 			require.NoError(t, err)
 
-			req := httptest.NewRequest(http.MethodPost, "/users/sign-in", bytes.NewBuffer(body))
+			req := httptest.NewRequest(http.MethodPost, "/api/users/sign-in", bytes.NewBuffer(body))
 			req.Header.Set("Content-Type", "application/json")
 			rec := httptest.NewRecorder()
 
@@ -338,7 +338,7 @@ func TestLogOut(t *testing.T) {
 			})
 			require.NoError(t, err)
 
-			req := httptest.NewRequest(http.MethodPost, "/logout", bytes.NewBuffer(body))
+			req := httptest.NewRequest(http.MethodPost, "/api/logout", bytes.NewBuffer(body))
 			req.Header.Set("Content-Type", "application/json")
 			rec := httptest.NewRecorder()
 
@@ -436,7 +436,7 @@ func TestRefresh(t *testing.T) {
 			})
 			require.NoError(t, err)
 
-			req := httptest.NewRequest(http.MethodPost, "/refresh", bytes.NewBuffer(body))
+			req := httptest.NewRequest(http.MethodPost, "/api/refresh", bytes.NewBuffer(body))
 			req.Header.Set("Content-Type", "application/json")
 			rec := httptest.NewRecorder()
 
