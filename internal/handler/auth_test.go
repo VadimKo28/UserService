@@ -161,6 +161,7 @@ func TestSignIn(t *testing.T) {
 
 	type response struct {
 		Success bool   `json:"success"`
+		UserID  int    `json:"user_id,omitempty"`
 		Message string `json:"message,omitempty"`
 		Status  int    `json:"status,omitempty"`
 	}
@@ -172,6 +173,7 @@ func TestSignIn(t *testing.T) {
 		mockError         error
 		mockAccessToken   string
 		mockRefreshToken  string
+		mockUserID        int
 		expectedStatus    int
 		expectedSuccess   bool
 		expectedErrMsg    string
@@ -183,6 +185,7 @@ func TestSignIn(t *testing.T) {
 			password:          "test123",
 			mockAccessToken:   "access-token",
 			mockRefreshToken:  "refresh-token",
+			mockUserID:        7,
 			expectedStatus:    http.StatusOK,
 			expectedSuccess:   true,
 			expectServiceCall: true,
@@ -234,7 +237,7 @@ func TestSignIn(t *testing.T) {
 			if tc.expectServiceCall {
 				mockUserService.
 					On("SignInUser", mock.Anything, tc.email, tc.password).
-					Return(tc.mockAccessToken, tc.mockRefreshToken, tc.mockError).
+					Return(tc.mockAccessToken, tc.mockRefreshToken, tc.mockUserID, tc.mockError).
 					Once()
 			}
 
@@ -261,6 +264,7 @@ func TestSignIn(t *testing.T) {
 			require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &resp))
 			assert.Equal(t, tc.expectedSuccess, resp.Success)
 			if tc.expectedSuccess {
+				assert.Equal(t, tc.mockUserID, resp.UserID)
 				cookies := rec.Result().Cookies()
 				assertCookieValue(t, cookies, "access_token", tc.mockAccessToken)
 				assertCookieValue(t, cookies, "refresh_token", tc.mockRefreshToken)

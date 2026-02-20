@@ -19,7 +19,7 @@ type UserService interface {
 	SignUpUser(ctx context.Context, name, email, password string) (int, error)
 	SignUpUserWithTokens(ctx context.Context, name, email, password string) (int, string, string, error)
 	GetUser(ctx context.Context, id string) (users.User, error)
-	SignInUser(ctx context.Context, email, password string) (string, string, error)
+	SignInUser(ctx context.Context, email, password string) (string, string, int, error)
 	RefreshTokens(ctx context.Context, refreshToken string) (string, string, error)
 	LogOut(ctx context.Context, refreshToken string) error
 }

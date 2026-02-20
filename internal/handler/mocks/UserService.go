@@ -97,7 +97,7 @@ func (_m *UserService) RefreshTokens(ctx context.Context, refreshToken string) (
 }
 
 // SignInUser provides a mock function with given fields: ctx, email, password
-func (_m *UserService) SignInUser(ctx context.Context, email string, password string) (string, string, error) {
+func (_m *UserService) SignInUser(ctx context.Context, email string, password string) (string, string, int, error) {
 	ret := _m.Called(ctx, email, password)
 
 	if len(ret) == 0 {
@@ -106,8 +106,9 @@ func (_m *UserService) SignInUser(ctx context.Context, email string, password st
 
 	var r0 string
 	var r1 string
-	var r2 error
-	if rf, ok := ret.Get(0).(func(context.Context, string, string) (string, string, error)); ok {
+	var r2 int
+	var r3 error
+	if rf, ok := ret.Get(0).(func(context.Context, string, string) (string, string, int, error)); ok {
 		return rf(ctx, email, password)
 	}
 	if rf, ok := ret.Get(0).(func(context.Context, string, string) string); ok {
@@ -122,13 +123,19 @@ func (_m *UserService) SignInUser(ctx context.Context, email string, password st
 		r1 = ret.Get(1).(string)
 	}
 
-	if rf, ok := ret.Get(2).(func(context.Context, string, string) error); ok {
+	if rf, ok := ret.Get(2).(func(context.Context, string, string) int); ok {
 		r2 = rf(ctx, email, password)
 	} else {
-		r2 = ret.Error(2)
+		r2 = ret.Get(2).(int)
 	}
 
-	return r0, r1, r2
+	if rf, ok := ret.Get(3).(func(context.Context, string, string) error); ok {
+		r3 = rf(ctx, email, password)
+	} else {
+		r3 = ret.Error(3)
+	}
+
+	return r0, r1, r2, r3
 }
 
 // SignUpUser provides a mock function with given fields: ctx, name, email, password

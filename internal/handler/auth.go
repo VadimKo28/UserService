@@ -72,7 +72,7 @@ func (r *handler) SignIn(c *gin.Context) {
 		return
 	}
 
-	accessToken, refreshToken, err := r.service.SignInUser(c.Request.Context(), params.Email, params.Password)
+	accessToken, refreshToken, userId, err := r.service.SignInUser(c.Request.Context(), params.Email, params.Password)
 
 	if err != nil {
 		c.Error(err)
@@ -84,6 +84,7 @@ func (r *handler) SignIn(c *gin.Context) {
 
 	c.JSON(200, map[string]any{
 		"success": true,
+		"user_id": userId,
 	})
 
 }
