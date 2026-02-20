@@ -95,11 +95,11 @@ func (s *UserService) GetUser(ctx context.Context, id string) (users.User, error
 	return user, nil
 }
 
-func (s *UserService) SignInUser(ctx context.Context, email, password string) (string, string, error) {
+func (s *UserService) SignInUser(ctx context.Context, email, password string) (string, string, int, error) {
 	hashedPassword, err := s.hasher.Hash(password)
 
 	if err != nil {
-		return "", "", err
+		return "", "", 0, err
 	}
 
 	userDTO := users.UserSignInDTO{
@@ -110,20 +110,20 @@ func (s *UserService) SignInUser(ctx context.Context, email, password string) (s
 	user, err := s.storage.GetByCredentials(ctx, &userDTO)
 
 	if err != nil {
-		return "", "", err
+		return "", "", 0, err
 	}
 
 	accessToken, refreshToken, err := s.tokenService.GenerateTokens(int(user.ID))
 
 	if err != nil {
-		return "", "", err
+		return "", "", 0, err
 	}
 
 	if err := s.refreshStorage.Save(ctx, int(user.ID), refreshToken, time.Now().Add(s.refreshTokenTTL)); err != nil {
-		return "", "", err
+		return "", "", 0, err
 	}
 
-	return accessToken, refreshToken, nil
+	return accessToken, refreshToken, user.ID, nil
 }
 
 func (s *UserService) RefreshTokens(ctx context.Context, refreshToken string) (string, string, error) {
