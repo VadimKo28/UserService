@@ -3,6 +3,9 @@ package handler
 import (
 	"fmt"
 	"log/slog"
+	"time"
+
+	"app/internal/metrics"
 
 	"github.com/gin-gonic/gin"
 )
@@ -55,6 +58,7 @@ func (r *handler) SignUp(c *gin.Context) {
 	}
 
 	setAuthCookies(c, accessToken, refreshToken)
+	metrics.IncUsersCreated(time.Now())
 
 	c.JSON(200, map[string]any{
 		"success": true,

@@ -2,6 +2,7 @@ package handler
 
 import (
 	"app/internal/domain/subscription"
+	"app/internal/metrics"
 	"app/internal/storage"
 	"fmt"
 	"log/slog"
@@ -74,6 +75,8 @@ func (h *handler) CreateUserSubscription(c *gin.Context) {
 		h.logger.Error("Failed to create subscription", slog.String("error:", err.Error()))
 		return
 	}
+
+	metrics.IncSubscriptionsCreated(time.Now())
 
 	c.JSON(http.StatusCreated, map[string]any{
 		"success":         true,

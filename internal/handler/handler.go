@@ -4,6 +4,7 @@ import (
 	"app/internal/domain/subscription"
 	"app/internal/domain/users"
 	"app/internal/lib/api/response"
+	"app/internal/metrics"
 	"app/internal/middleware"
 	"context"
 	"log/slog"
@@ -12,6 +13,7 @@ import (
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 	"github.com/go-playground/validator/v10"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
 
 //go:generate mockery --name UserService --output ./mocks --dir .
@@ -70,16 +72,20 @@ const (
 func (h *handler) Register(router *gin.Engine) {
 	router.Use(middleware.ErrorHandler())
 	router.Use(cors.New(cors.Config{
-		AllowOrigins:     []string{"http://194.156.66.86"},
-		AllowMethods:     []string{"PUT", "PATCH", "POST", "GET", "DELETE"},
+		AllowOrigins:     []string{"http://194.156.66.86", "http://localhost:3010", "http://127.0.0.1:3010"},
+		AllowMethods:     []string{"PUT", "PATCH", "POST", "GET", "DELETE", "OPTIONS"},
 		AllowHeaders:     []string{"Origin", "Content-Type", "Authorization"},
 		ExposeHeaders:    []string{"Content-Length", "Authorization"},
 		AllowCredentials: true,
 		AllowOriginFunc: func(origin string) bool {
-			return origin == "http://194.156.66.86"
+			return origin == "http://194.156.66.86" ||
+				origin == "http://localhost:3010" ||
+				origin == "http://127.0.0.1:3010"
 		},
 		MaxAge: 12 * time.Hour,
 	}))
+
+	router.GET("/metrics", gin.WrapH(promhttp.HandlerFor(metrics.Registry, promhttp.HandlerOpts{})))
 
 	api := router.Group("/api")
 	public := api.Group("")
